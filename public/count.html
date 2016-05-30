@@ -1,0 +1,29 @@
+<html>
+<head>
+<script src="jquery.js"></script>
+<script>
+$(document).ready(function(){
+    $("#up").click(function(){
+        $.post("up",function(data){
+            console.log("up data received");
+            $("#count").text(data);
+        });
+    });
+    $("#down").click(function(){
+        $.post("down",function(data){
+            console.log("down data received");
+            $("#count").text(data);
+        });
+    });
+});
+</script>
+</head>
+<body>
+
+<div id="count">0</div>
+<button id="up">Count Up</button><br>
+<button id="down">Count Down</button><br>
+
+</body>
+</html>
+

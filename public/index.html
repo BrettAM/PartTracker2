@@ -1,0 +1,30 @@
+<html>
+<head>
+<script src="jquery.js"></script>
+<script>
+$(document).ready(function(){
+    $( "#jobform" ).submit(function( event ) {
+        // Stop form from submitting normally
+        event.preventDefault();
+
+        job = $(this).find( "input[name='jid']" ).val();
+        console.log(job);
+        // Send the data using post
+        var posting = $.post("start", { jid: job } ).then(function (data){
+            window.location.replace(data)
+        });
+    });
+});
+</script>
+</head>
+<body>
+
+<div>Enter a job #</div>
+<form action="/" id="jobform">
+  <input type="text" name="jid" placeholder="job id">
+  <input type="submit" value="Start">
+</form>
+
+</body>
+</html>
+
