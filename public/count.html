@@ -1,16 +1,21 @@
 <html>
 <head>
 <script src="jquery.js"></script>
+<script src="URI.js"></script>
 <script>
+var uri = new URI(window.location);
+var jobid = uri.search(true)["id"];
+var joburl = "jobs?"+$.param({id: jobid});
+console.log(jobid);
 $(document).ready(function(){
     $("#up").click(function(){
-        $.post("up",function(data){
+        $.post(joburl,"up").then(function(data){
             console.log("up data received");
             $("#count").text(data);
         });
     });
     $("#down").click(function(){
-        $.post("down",function(data){
+        $.post(joburl,"down").then(function(data){
             console.log("down data received");
             $("#count").text(data);
         });

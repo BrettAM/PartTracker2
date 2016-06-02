@@ -9,10 +9,8 @@ $(document).ready(function(){
 
         job = $(this).find( "input[name='jid']" ).val();
         console.log(job);
-        // Send the data using post
-        var posting = $.post("start", { jid: job } ).then(function (data){
-            window.location.replace(data)
-        });
+
+        window.location.replace("jobs?"+$.param({id: job}))
     });
 });
 </script>
