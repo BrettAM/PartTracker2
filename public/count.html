@@ -8,6 +8,10 @@ var jobid = uri.search(true)["id"];
 var joburl = "jobs?"+$.param({id: jobid});
 console.log(jobid);
 $(document).ready(function(){
+    $.post(joburl).then(function(data){
+        $("#count").text(data);
+    });
+
     $("#up").click(function(){
         $.post(joburl,"up").then(function(data){
             console.log("up data received");
