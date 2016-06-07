@@ -10,7 +10,7 @@ $(document).ready(function(){
         job = $(this).find( "input[name='jid']" ).val();
         console.log(job);
 
-        window.location.replace("jobs?"+$.param({id: job}))
+        window.location = "jobs?"+$.param({id: job});
     });
 });
 </script>
@@ -22,6 +22,8 @@ $(document).ready(function(){
   <input type="text" name="jid" placeholder="job id">
   <input type="submit" value="Start">
 </form>
+
+<a href="manager.html">Current Jobs</a>
 
 </body>
 </html>
