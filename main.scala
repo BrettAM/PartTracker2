@@ -20,10 +20,6 @@ object Main {
 		def handle(q: Request, p: Response): AnyRef = f(q,p)
 	}
 
-	def jobsPage = {
-		Source.fromFile("./public/count.html").getLines.mkString
-	}
-
 	case class Job(val id: String, val target: Int) {
 		var count: Int = 0
 	}
@@ -81,15 +77,6 @@ object Main {
 			val rtn: String = gson.toJson(asJavaIterable(jobs.values))
 			System.out.println(rtn)
 			rtn
-		}
-
-		get("/jobs"){ (req,res) =>
-/*			val id: String = req.queryParams("id")
-			println("jobs request id "+id)
-			if(!jobs.contains(id)){
-				jobs(id) = Job(id,0)
-			}*/
-			jobsPage
 		}
 
 		System.console().readLine()
