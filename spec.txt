@@ -1,0 +1,12 @@
+Employee number
+MO#
+operation#
+Department {paint, conventional}
+PartsPerHour
+CrewSize (PPH multiplier only)
+
+on disk job storage
+
+manger view, filter by departent, operation#, time
+
+configurable port

@@ -22,28 +22,50 @@ object Main {
 
 	case class Job(val id: String, val target: Int) {
 		var count: Int = 0
+		@transient val watchList =
+			scala.collection.mutable.ListBuffer.empty[JobSession]
+		def modify(dir: String) = {
+			if(dir == "up") count += 1
+			else if(dir == "down") count -= 1
+			alert(count.toString)
+		}
+		private def alert(message: String) = {
+			watchList.foreach(_.sendMessage(message))
+		}
 	}
 	val gson = new Gson();
 	val jobs = scala.collection.mutable.HashMap.empty[String,Job]
 
 	class JobSession(val js: JettySession) {
-		var jobid: Option[String] = None
+		var job: Option[Job] = None
 		def onMessage(message: String): Unit = {
-			if(jobid == None){
-				jobid = Some(message)
-				println("jobs request id "+message)
-				if(!jobs.contains(message)){
-					jobs(message) = Job(message,0)
+			job match {
+				case None => {
+					val j = {
+						if(jobs.contains(message)) jobs(message)
+						else {
+							val nj = new Job(message,0)
+							jobs(message) = nj
+							nj
+						}
+					}
+					job = Some(j)
+					j.watchList += this
+					sendMessage(j.count.toString)
 				}
-			} else {
-				val dir = message
-				if(dir == "up") jobs(jobid.get).count += 1
-				else if(dir == "down") jobs(jobid.get).count -= 1
+				case Some(j) => j.modify(message)
 			}
-			sendMessage(jobs(jobid.get).count.toString())
 		}
 		def onClose(code: Int, reason: String): Unit = {
-			println(jobid+" closed "+reason)
+			job match {
+				case None => {
+					println("Session closed with no job assigned")
+				}
+				case Some(j) => {
+					j.watchList -= this
+					println("session for "+j.id+" closed")
+				}
+			}
 		}
 		def sendMessage(message: String) = {
 			js.getRemote.sendStringByFuture(message);
@@ -70,14 +92,17 @@ object Main {
 
 	def main(args: Array[String]) = {
 		staticFiles.externalLocation("./public")
+		//socket doc
 		webSocket("/socket", ClickResponder.getClass);
 		Spark.port(4567)
-
+		//joblist doc
 		get("/joblist"){ (req, res) =>
 			val rtn: String = gson.toJson(asJavaIterable(jobs.values))
 			System.out.println(rtn)
 			rtn
 		}
+		//jobcreate doc
+		//jobdata doc
 
 		System.console().readLine()
 		Spark.stop()
