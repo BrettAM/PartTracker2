@@ -4,7 +4,11 @@ import spark.Spark._
 
 import com.google.gson.Gson
 
+import scala.collection.JavaConversions._
 import scala.io.Source
+
+import org.eclipse.jetty.websocket.api.{Session => JettySession};
+import org.eclipse.jetty.websocket.api.annotations._;
 
 object Main {
 	type Route_t = (Request,Response)=>AnyRef
@@ -20,44 +24,72 @@ object Main {
 		Source.fromFile("./public/count.html").getLines.mkString
 	}
 
-	val counts = scala.collection.mutable.HashMap.empty[String,Int]
-
-	case class Job(val id: Int, val target: Int) {
+	case class Job(val id: String, val target: Int) {
 		var count: Int = 0
 	}
 	val gson = new Gson();
+	val jobs = scala.collection.mutable.HashMap.empty[String,Job]
+
+	class JobSession(val js: JettySession) {
+		var jobid: Option[String] = None
+		def onMessage(message: String): Unit = {
+			if(jobid == None){
+				jobid = Some(message)
+				println("jobs request id "+message)
+				if(!jobs.contains(message)){
+					jobs(message) = Job(message,0)
+				}
+			} else {
+				val dir = message
+				if(dir == "up") jobs(jobid.get).count += 1
+				else if(dir == "down") jobs(jobid.get).count -= 1
+			}
+			sendMessage(jobs(jobid.get).count.toString())
+		}
+		def onClose(code: Int, reason: String): Unit = {
+			println(jobid+" closed "+reason)
+		}
+		def sendMessage(message: String) = {
+			js.getRemote.sendStringByFuture(message);
+		}
+	}
+
+	@WebSocket object ClickResponder{
+		val connected = scala.collection.mutable.HashMap.empty[JettySession,JobSession]
+	    @OnWebSocketConnect
+	    def onConnect(remote: JettySession): Unit = {
+	    	connected +=( (remote,new JobSession(remote)) )
+	    }
+	    @OnWebSocketClose
+	    def onClose(remote: JettySession, code: Int, reason:String): Unit = {
+	    	val js = connected(remote)
+	    	js.onClose(code, reason)
+	    	connected -= remote
+	    }
+	    @OnWebSocketMessage
+	    def onMessage(remote: JettySession, message: String): Unit = {
+	    	connected(remote).onMessage(message)
+	    }
+	}
 
 	def main(args: Array[String]) = {
-		val job = Job(5, 10)
-		val json = gson.toJson(job)
-		println()
-		println(job)
-		println(json)
-		println(gson.fromJson(json,classOf[Job]))
-		println()
-
 		staticFiles.externalLocation("./public")
+		webSocket("/socket", ClickResponder.getClass);
 		Spark.port(4567)
 
-		get("/jobs"){ (req,res) =>
-			val id: String = req.queryParams("id")
-			println("jobs request id "+id)
-			if(!counts.contains(id)){
-				counts(id) = 0
-			}
-			jobsPage
+		get("/joblist"){ (req, res) =>
+			val rtn: String = gson.toJson(asJavaIterable(jobs.values))
+			System.out.println(rtn)
+			rtn
 		}
 
-		post("/jobs"){ (req,res) =>
-			val dir: String = req.body()
-			val id: String = req.queryParams("id")
-
-			if(dir == "up") counts(id) += 1
-			else if(dir == "down") counts(id) -= 1
-
-			println(id+" : "+dir+" : "+counts(id))
-
-			counts(id).toString()
+		get("/jobs"){ (req,res) =>
+/*			val id: String = req.queryParams("id")
+			println("jobs request id "+id)
+			if(!jobs.contains(id)){
+				jobs(id) = Job(id,0)
+			}*/
+			jobsPage
 		}
 
 		System.console().readLine()
