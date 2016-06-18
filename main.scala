@@ -36,36 +36,24 @@ object Main {
 	val gson = new Gson();
 	val jobs = scala.collection.mutable.HashMap.empty[String,Job]
 
-	class JobSession(val js: JettySession) {
-		var job: Option[Job] = None
-		def onMessage(message: String): Unit = {
-			job match {
-				case None => {
-					val j = {
-						if(jobs.contains(message)) jobs(message)
-						else {
-							val nj = new Job(message,0)
-							jobs(message) = nj
-							nj
-						}
-					}
-					job = Some(j)
-					j.watchList += this
-					sendMessage(j.count.toString)
-				}
-				case Some(j) => j.modify(message)
-			}
-		}
+	def loadJob(id: String): Option[Job] = {
+        if(jobs.contains(id)) {
+            Some(jobs(id))
+        } else {
+            val job = new Job(id, 0)
+            jobs +=( (id, job) )
+            Some(job)
+        }
+	}
+
+	class JobSession(val job: Job, val js: JettySession) {
+		job.watchList += this
+		sendMessage(job.count.toString)
+		println("Session for "+job.id+" accepted")
+		def onMessage(message: String): Unit = job.modify(message)
 		def onClose(code: Int, reason: String): Unit = {
-			job match {
-				case None => {
-					println("Session closed with no job assigned")
-				}
-				case Some(j) => {
-					j.watchList -= this
-					println("session for "+j.id+" closed")
-				}
-			}
+			job.watchList -= this
+			println("session for "+job.id+" closed")
 		}
 		def sendMessage(message: String) = {
 			js.getRemote.sendStringByFuture(message);
@@ -76,13 +64,24 @@ object Main {
 		val connected = scala.collection.mutable.HashMap.empty[JettySession,JobSession]
 	    @OnWebSocketConnect
 	    def onConnect(remote: JettySession): Unit = {
-	    	connected +=( (remote,new JobSession(remote)) )
+	    	val parameters = remote.getUpgradeRequest.getParameterMap
+            val job = Option(parameters.get("id"))
+                        .flatMap(l => Option(l.get(0)))
+                        .flatMap(j => loadJob(j))
+	    	job match {
+				case Some(job) =>
+					connected += ((remote, new JobSession(job, remote)))
+				case None =>
+					remote.close(1008, "job connections require a valid id")
+	    	}
 	    }
 	    @OnWebSocketClose
 	    def onClose(remote: JettySession, code: Int, reason:String): Unit = {
-	    	val js = connected(remote)
-	    	js.onClose(code, reason)
-	    	connected -= remote
+            if(connected.contains(remote)){
+    	    	val js = connected(remote)
+    	    	js.onClose(code, reason)
+    	    	connected -= remote
+            }
 	    }
 	    @OnWebSocketMessage
 	    def onMessage(remote: JettySession, message: String): Unit = {
@@ -93,7 +92,7 @@ object Main {
 	def main(args: Array[String]) = {
 		staticFiles.externalLocation("./public")
 		//socket doc
-		webSocket("/socket", ClickResponder.getClass);
+		webSocket("/job", ClickResponder.getClass);
 		Spark.port(4567)
 		//joblist doc
 		get("/joblist"){ (req, res) =>

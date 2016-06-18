@@ -5,11 +5,10 @@
 <script>
 var uri = new URI(window.location);
 var jobid = uri.search(true)["id"];
-var socketAddress = "ws://"+location.hostname+":"+location.port+"/socket";
+var socketAddress = "ws://"+location.hostname+":"+location.port+"/job?id="+jobid;
 $(document).ready(function(){
     var webSocket = new WebSocket(socketAddress);
     webSocket.onmessage = function (event) { $("#count").text(event.data); };
-    webSocket.onopen = function () { webSocket.send(jobid); };
     $("#up").click(function(){ webSocket.send("up") });
     $("#down").click(function(){ webSocket.send("down") });
 });
