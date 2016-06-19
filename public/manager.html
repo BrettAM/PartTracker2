@@ -11,8 +11,8 @@ $(document).ready(function(){
         for(var i = 0; i < jobs.length; i++){
             var job = jobs[i]
             table.append($('<tr>')
-                .append($('<td>').append(job.id))
-                .append($('<td>').append(job.target))
+                .append($('<td>').append(job.MO))
+                .append($('<td>').append(job.Dept))
                 .append($('<td>').append(job.count))
             );
         }

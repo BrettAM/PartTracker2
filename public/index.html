@@ -12,18 +12,45 @@ $(document).ready(function(){
 
         window.location = "job.html?"+$.param({id: job});
     });
+    $( "#newjob" ).submit(function(event) {
+        event.preventDefault();
+        var jobdata = {
+            "MO": $(this).find("input[name='MO']").val(),
+            "OP": $(this).find("input[name='OP']").val(),
+            "Dept": $(this).find("input[name='Dept']").val(),
+            "Employee": $(this).find("input[name='Employee']").val(),
+            "PPH": $(this).find("input[name='PPH']").val(),
+            "Crew": $(this).find("input[name='Crew']").val()
+        };
+        console.log(jobdata);
+        console.log(JSON.stringify(jobdata));
+        $.post("jobdata", JSON.stringify(jobdata), function(data){
+            alert(data);
+        });
+    });
 });
 </script>
 </head>
 <body>
 
-<div>Enter a job #</div>
+<div>Enter an existing MO#</div>
 <form action="/" id="jobform">
   <input type="text" name="jid" placeholder="job id">
   <input type="submit" value="Start">
 </form>
 
 <a href="manager.html">Current Jobs</a>
+
+<div>Enter A new job</div>
+<form action="/" id="newjob">
+  <input type="text" name="MO" placeholder="MO#">
+  <input type="text" name="OP" placeholder="Operation">
+  <input type="text" name="Dept" placeholder="Department">
+  <input type="text" name="Employee" placeholder="Employee">
+  <input type="text" name="PPH" placeholder="PPH">
+  <input type="text" name="Crew" placeholder="Crew Size">
+  <input type="submit" value="Create">
+</form>
 
 </body>
 </html>

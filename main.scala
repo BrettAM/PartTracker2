@@ -20,9 +20,18 @@ object Main {
     def handle(q: Request, p: Response): AnyRef = f(q,p)
   }
 
-  case class Job(val id: String, val target: Int) {
+  case class Job(
+    val MO: String,
+    val OP: String,
+    val Dept: String,
+    val Employee: String,
+    val PPH: String,
+    val Crew: String
+  ) {
     var count: Int = 0
-    @transient val watchList = scala.collection.mutable.ListBuffer.empty[JobSession]
+    // this is lazy so it will still be initialized even if we are constructed
+    // by gson
+    @transient lazy val watchList = scala.collection.mutable.ListBuffer.empty[JobSession]
     def modify(dir: String) = {
       if(dir == "up") count += 1
       else if(dir == "down") count -= 1
@@ -32,27 +41,22 @@ object Main {
       watchList.foreach(_.sendMessage(message))
     }
   }
-  val gson = new Gson();
+  val gson = new Gson()
   val jobs = scala.collection.mutable.HashMap.empty[String,Job]
 
   def loadJob(id: String): Option[Job] = {
-    if(jobs.contains(id)) {
-      Some(jobs(id))
-    } else {
-      val job = new Job(id, 0)
-      jobs +=( (id, job) )
-      Some(job)
-    }
+    if(jobs.contains(id)) Some(jobs(id))
+    else None
   }
 
   class JobSession(val job: Job, val js: JettySession) {
     job.watchList += this
     sendMessage(job.count.toString)
-    println("Session for "+job.id+" accepted")
+    println("Session for "+job.MO+" accepted")
     def onMessage(message: String): Unit = job.modify(message)
     def onClose(code: Int, reason: String): Unit = {
       job.watchList -= this
-      println("session for "+job.id+" closed")
+      println("session for "+job.MO+" closed")
     }
     def sendMessage(message: String) = {
       js.getRemote.sendStringByFuture(message);
@@ -92,8 +96,7 @@ object Main {
 
     /* websocket job
      * connect requires query "id", being a valid job id
-     * While open, any changes to that id's count will be transmitted
-     *     back to the client
+     * While open, any changes to that id's count will be transmitted back to the client
      * The client can send "up" or "down" to alter the target job's count
      */
     webSocket("/job", ClickResponder.getClass);
@@ -105,9 +108,35 @@ object Main {
       System.out.println(rtn)
       rtn
     }
-
-    //jobcreate doc
-    //jobdata doc
+    /* Request information about a specific job
+     * Job is determined by the "id" query paramater
+     * Will return a json object if the job exists or an empty string otherwise
+     */
+    get("/jobdata"){ (req, res) =>
+      println("Get request")
+      val id = req.queryParams("id")
+      loadJob(id) match {
+        case Some(job) => gson.toJson(job)
+        case None => ""
+      }
+    }
+    /* Register a new job with the system
+     * required data (as json): MO number, Operation number, Department,
+     *     parts per hour, crew size, employee number
+     * ex. {"MO":"1","OP":"2","Dept":"Paint","PPH":3,"Crew":1,"Employee":"A"}
+     * will return true if the job is registered successfully, false otherwise
+     */
+    post("/jobdata"){ (req, res) =>
+      println("Post request: "+req.body)
+      val job = gson.fromJson(req.body, classOf[Job])
+      println(job)
+      if(jobs.contains(job.MO)){
+        "false"
+      } else {
+        jobs +=( (job.MO, job) )
+        "true"
+      }
+    }
 
     System.console().readLine()
     Spark.stop()
