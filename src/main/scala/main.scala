@@ -1,6 +1,8 @@
-import spark._
+package com
+
 import spark.Spark
-import spark.Spark._
+
+import com.SparkLib._
 
 import com.google.gson.Gson
 
@@ -11,36 +13,6 @@ import org.eclipse.jetty.websocket.api.{Session => JettySession};
 import org.eclipse.jetty.websocket.api.annotations._;
 
 object Main {
-  type Route_t = (Request,Response)=>AnyRef
-  def get(ext: String)(f: Route_t) = Spark.get(ext, new sRoute(f));
-  def post(ext: String)(f: Route_t) = Spark.post(ext, new sRoute(f));
-  def put(ext: String)(f: Route_t) = Spark.put(ext, new sRoute(f));
-  def delete(ext: String)(f: Route_t) = Spark.delete(ext, new sRoute(f));
-  class sRoute(val f: Route_t) extends Route {
-    def handle(q: Request, p: Response): AnyRef = f(q,p)
-  }
-
-  case class Job(
-    val MO: String,
-    val OP: String,
-    val Dept: String,
-    val Employee: String,
-    val PPH: String,
-    val Crew: String
-  ) {
-    var count: Int = 0
-    // this is lazy so it will still be initialized even if we are constructed
-    // by gson
-    @transient lazy val watchList = scala.collection.mutable.ListBuffer.empty[JobSession]
-    def modify(dir: String) = {
-      if(dir == "up") count += 1
-      else if(dir == "down") count -= 1
-      alert(count.toString)
-    }
-    private def alert(message: String) = {
-      watchList.foreach(_.sendMessage(message))
-    }
-  }
   val gson = new Gson()
   val jobs = scala.collection.mutable.HashMap.empty[String,Job]
 
@@ -50,12 +22,11 @@ object Main {
   }
 
   class JobSession(val job: Job, val js: JettySession) {
-    job.watchList += this
-    sendMessage(job.count.toString)
+    val listener = job.register(sendMessage(_))
     println("Session for "+job.MO+" accepted")
     def onMessage(message: String): Unit = job.modify(message)
     def onClose(code: Int, reason: String): Unit = {
-      job.watchList -= this
+      job.deregister(listener)
       println("session for "+job.MO+" closed")
     }
     def sendMessage(message: String) = {
@@ -91,7 +62,7 @@ object Main {
   }
 
   def main(args: Array[String]) = {
-    staticFiles.externalLocation("./public")
+    Spark.staticFiles.externalLocation("./public")
     Spark.port(4567)
 
     /* websocket job
@@ -99,7 +70,7 @@ object Main {
      * While open, any changes to that id's count will be transmitted back to the client
      * The client can send "up" or "down" to alter the target job's count
      */
-    webSocket("/job", ClickResponder.getClass);
+    Spark.webSocket("/job", ClickResponder.getClass);
     /* request a list of all jobs
      * Will return a json object
      */
@@ -138,6 +109,7 @@ object Main {
       }
     }
 
+    //shutdown after receiving a line
     System.console().readLine()
     Spark.stop()
   }
