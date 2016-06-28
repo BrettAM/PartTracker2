@@ -1,12 +1,28 @@
-Employee number
 MO#
 operation#
+Employee number
 Department {paint, conventional}
 PartsPerHour
 CrewSize (PPH multiplier only)
 
 on disk job storage
 
-manger view, filter by departent, operation#, time
-
 configurable port
+
+operation numbers need to store predicted parts completed vs actual
+
+MO#'s are not reused
+each MO# has a few unique operation#'s
+PPH and department never change for a given operation number
+
+enter new/existing MO#:
+
+ -> MO page, shows operations, Departments, PPH, parts completed "Work" link,
+
+    -> work page has Employee number, crew size, start/stop timer, log part
+
+are department numbers tied to MO# or operation#?
+What fields need to be searchable?
+What do you want to do with employee number?
+should crew size/ individual work sessions be stored?
+
