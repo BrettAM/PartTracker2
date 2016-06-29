@@ -7,22 +7,29 @@ import scala.collection.JavaConversions._
 import scala.collection.mutable.Buffer
 import scala.reflect.ClassTag
 import scala.reflect.classTag
-import scala.collection.mutable.{Map => MMap}
-
+import scala.collection.mutable.{Map => MutMap}
+import scala.collection.{Map => AnyMap}
+import scala.collection.{Seq => AnySeq}
 
 object Serialization{
+  /**
+   * A note about serialization:
+   * gson will happily return a Map[Int,Any] when it makes a Map[String,Any]
+   * that will cause a class cast exception when you try and use it. Only
+   * serialize/deserialize Map[String,_]'s and maybe I'll think of a way to
+   * make it more typesafe later.
+   */
+
   private val gson = (new GsonBuilder())
-    .registerTypeHierarchyAdapter(classOf[Seq[_]], new SeqSerializer)
-    .registerTypeHierarchyAdapter(classOf[Map[_,_]], new MapSerializer)
-    .registerTypeAdapter(classOf[Buffer[_]], new BufferDeserializer)
-    .registerTypeAdapter(classOf[MMap[_,_]], new MapDeserializer)
+    .registerTypeHierarchyAdapter(classOf[AnySeq[_]], new SeqSerializer)
+    .registerTypeHierarchyAdapter(classOf[AnyMap[_,_]], new MapSerializer)
+    .registerTypeHierarchyAdapter(classOf[Buffer[_]], new BufferDeserializer)
+    .registerTypeHierarchyAdapter(classOf[MutMap[String,_]], new MapDeserializer)
     .create
 
   def toJson(input: Any): String = gson.toJson(input)
   def fromJson[T: ClassTag](input: String): T =
     gson.fromJson(input, classTag[T].runtimeClass)
-
-  //Make the exception handling in the deserializers better?
 
   /** Attempt extract a list of type parameters from a Type t */
   private def getTypeParameters(t: Type): Option[Array[_ <: Type]] = t match {
@@ -32,8 +39,8 @@ object Serialization{
   }
 
   /** Serialize subclasses of Seq as json arrays */
-  private class SeqSerializer extends JsonSerializer[Seq[_]] {
-    def serialize(src: Seq[_], t: Type, ctx: JsonSerializationContext) = {
+  private class SeqSerializer extends JsonSerializer[AnySeq[_]] {
+    def serialize(src: AnySeq[_], t: Type, ctx: JsonSerializationContext) = {
       val array = new JsonArray()
       src.foreach(e => array.add(ctx.serialize(e)))
       array
@@ -44,8 +51,8 @@ object Serialization{
    * Serialize subclasses of Map as json objects
    * Note that the keys will be stored by their "toString" version
    */
-  private class MapSerializer extends JsonSerializer[Map[_,_]] {
-    def serialize(src: Map[_,_], t: Type, ctx: JsonSerializationContext) = {
+  private class MapSerializer extends JsonSerializer[AnyMap[_,_]] {
+    def serialize(src: AnyMap[_,_], t: Type, ctx: JsonSerializationContext) = {
       val map = new JsonObject()
       src.foreach{ case (k,v) => map.add(k.toString, ctx.serialize(v)) }
       map
@@ -71,7 +78,7 @@ object Serialization{
   }
 
   /** deserialize a mutable map from a json object */
-  private class MapDeserializer extends JsonDeserializer[MMap[_,_]] {
+  private class MapDeserializer extends JsonDeserializer[MutMap[String,_]] {
     def deserialize(e: JsonElement, t: Type, ctx: JsonDeserializationContext) = {
       val obj = if(e.isJsonObject) e.getAsJsonObject
                 else throw new JsonParseException("Can't deserialize map from nonobject")
@@ -81,7 +88,7 @@ object Serialization{
         case None => throw new Exception("Can't find map key type")
       }
 
-      val builder = scala.collection.mutable.Map.newBuilder[Any,Any]
+      val builder = scala.collection.mutable.Map.newBuilder[String,Any]
       obj.entrySet.foreach{ entry =>
         val k = entry.getKey
         val v: Any = ctx.deserialize(entry.getValue,innertType)

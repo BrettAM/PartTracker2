@@ -29,37 +29,65 @@ class ExampleSpec extends FlatSpec with Matchers {
     s should be (Buffer(1,2,3,42))
   }
 
-  "A Deserialized WorkSession" should "Have Correct Immutable Values" in {
-    val initial = new WorkSession("bob",1)
-    val result = fromJson[WorkSession](toJson(initial))
-    result.employee should be (initial.employee)
-    result.crewSize should be (initial.crewSize)
+  "A Deserialized WorkSession" should "Have Correct Values" in {
+    val r = fromJson[WorkSession](
+      """{"employee":"bob","crewSize":1,"start":2,"elapsed":3,"count":4}""")
+    r.employee should be ("bob")
+    r.crewSize should be (1)
+    r.start should be (2)
+    r.elapsed should be (3)
+    r.count should be (4)
   }
 
-  "A Deserialized WorkSession" should "Have Correct mutable Values" in {
+  "A Serialized WorkSession" should "Deserialize equally" in {
     val initial = new WorkSession("bob",1)
     initial.count = 10
     initial.elapsed = 20
     val result = fromJson[WorkSession](toJson(initial))
-    result.count should be (initial.count)
-    result.elapsed should be (initial.elapsed)
-  }
-
-  "A Deserialized WorkSession" should "Have the right Date" in {
-    val initial = new WorkSession("bob",1)
-    val result = fromJson[WorkSession](toJson(initial))
+    result.employee should be (initial.employee)
+    result.crewSize should be (initial.crewSize)
     result.start should be (initial.start)
+    result.elapsed should be (initial.elapsed)
+    result.count should be (initial.count)
   }
 
   "A Deserialized Operation" should "Work" in {
     val initial = new Operation(1,"Paint",10)
-    initial.newSession("Session",3)
-    //System.err.println(toJson(initial))
+
+    val session = initial.newSession("Session",3)
+    session.count = 20
+
     val result = fromJson[Operation](toJson(initial))
-    //result.sessions.foreach(println)
-    //result.number should be (initial.number)
-    //result.department should be (initial.department)
-    //result.PPH should be (initial.PPH)
+
+    result.number should be (initial.number)
+    result.department should be (initial.department)
+    result.PPH should be (initial.PPH)
+    result.completed should be (20)
   }
 
+  "A deserialized operation" should "not fail" in {
+    val initial = new Operation(1,"Paint",10)
+
+    val session = initial.newSession("Session",3)
+    session.count = 20
+
+    val result = fromJson[Operation](toJson(initial))
+
+    result.number should be (initial.number)
+    result.department should be (initial.department)
+    result.PPH should be (initial.PPH)
+    result.completed should be (20)
+  }
+
+  "A deserialized MO" should "be keep its operations and counts" in {
+    val mo = new MO("A")
+    val op = new Operation(1, "Paint", 10)
+    val ws = op.newSession("Session",2)
+    ws.count = 20
+    mo.addOperation(op)
+    val json = toJson(mo)
+    val result = fromJson[MO](json)
+    result.getOperations.foreach(println)
+    result.getOperation(1).get.completed should be (20)
+  }
 }

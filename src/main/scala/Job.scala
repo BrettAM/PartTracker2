@@ -4,19 +4,19 @@ import java.util.Date
 
 // A grouping of Operations
 class MO(val id: String){
-  private val operations = scala.collection.mutable.HashMap.empty[Int,Operation]
+  private val operations = scala.collection.mutable.HashMap.empty[String,Operation]
 
   def addOperation(op: Operation): Unit = {
     //check that that number doesn't already exist
-    if(operations.contains(op.number)){
-      operations(op.number) = op
+    if(!operations.contains(op.number.toString)){
+      operations(op.number.toString) = op
     } else {
       throw new Exception("Attempt to add operation number that already exists")
     }
   }
 
   def getOperation(number: Int): Option[Operation] =
-    if(operations.contains(number)) Some(operations(number))
+    if(operations.contains(number.toString)) Some(operations(number.toString))
     else None
 
   def getOperations(): Iterable[Operation] = operations.values
