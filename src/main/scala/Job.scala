@@ -31,11 +31,16 @@ class Operation(
   val sessions = scala.collection.mutable.Buffer.empty[WorkSession]
   def completed: Long = sessions.map(_.count).sum
   def totalTime: Long = sessions.map(_.elapsed).sum
-  def newSession(employee: String, crew: Int) =  {
+  def newSession(employee: String, crew: Int) = {
     val s = new WorkSession(employee, crew)
     sessions += s
     s
   }
+
+  class OperationSummary(val number: Int, val department: String,
+                         val PPH: Double, val partsCompleted: Long,
+                         val truePPH: Double){}
+  def summary = new OperationSummary(number, department, PPH, completed, 0.0)
 }
 
 // A single instance of working on an Operation
@@ -47,45 +52,4 @@ class WorkSession(
   var elapsed: Long = 0
   var count: Long = 0
   override def toString: String = s"WorkSession by $employee with $count clicks"
-}
-
-case class Job(
-  val MO: String,
-  val OP: String,
-  val Dept: String,
-  val Employee: String,
-  val PPH: String,
-  val Crew: String
-) {
-  type Listener = String => Unit
-
-  private var count: Int = 0
-
-  // this is lazy so it will still be initialized even if we are constructed by gson
-  @transient private lazy val watchList =
-    scala.collection.mutable.ListBuffer.empty[Listener]
-
-  def register(upd: Listener): Listener = {
-    watchList += upd
-    sendCount()
-    upd
-  }
-
-  def deregister(upd: Listener) = {
-    watchList -= upd
-  }
-
-  def modify(dir: String) = {
-    if(dir == "up") count += 1
-    else if(dir == "down") count -= 1
-    sendCount()
-  }
-
-  private def sendCount() = {
-    transmit(count.toString)
-  }
-
-  private def transmit(message: String) = {
-    watchList.foreach(f => f(message))
-  }
 }
