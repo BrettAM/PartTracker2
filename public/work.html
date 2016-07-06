@@ -1,0 +1,60 @@
+<html>
+<head>
+<script src="jquery.js"></script>
+<script src="URI.js"></script>
+<script>
+var uri = new URI(window.location);
+var MO = uri.search(true)["MO"];
+var op = uri.search(true)["opnum"];
+
+function showStartup(){
+  $("#login").show();
+  $("#working").hide();
+}
+
+function hideStartup(){
+  $("#login").hide();
+  $("#working").show();
+}
+
+$(document).ready(function(){
+  showStartup();
+
+  $( "#start" ).submit(function(event) {
+    event.preventDefault();
+    var emp = $(this).find("input[name='Employee']").val();
+    var crw = $(this).find("input[name='CrewSize']").val();
+    var socketAddress = "ws://"+location.hostname+":"+location.port+"/job?"
+                        +$.param({MO: MO, opnum: op, empl: emp, crew: crw});
+
+    var webSocket = new WebSocket(socketAddress);
+    hideStartup();
+    webSocket.onmessage = function (event) { $("#count").text(event.data); };
+    webSocket.onclose = function(event) {
+      showStartup();
+      alert("Connection Failure");
+    }
+    $("#Part").click(function(){ webSocket.send("1") });
+  });
+});
+// webSocket heartbeat
+</script>
+</head>
+<body>
+
+<div id="login">
+  <form id="start">
+    <input type="text" name="Employee" placeholder="Employee Number">
+    <input type="text" name="CrewSize" placeholder="Crew Size">
+    <input type="submit" value="Enter">
+  </form>
+</div>
+
+<div id="working">
+  <div id="count">0</div>
+  <button id="Part">Part</button><br>
+</div>
+
+</body>
+</html>
+

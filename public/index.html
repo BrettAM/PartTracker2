@@ -10,6 +10,10 @@ function registerNewOperation(MO, number, dept, pph){
   });
 }
 
+function workRedirect(MO, operation) {
+  window.location = "work.html?"+$.param({MO: MO, opnum: operation})
+}
+
 function populateMoTable(MOnumber) {
   $.get("mo", {MO: MOnumber}, function(data){
     console.log(data);
@@ -25,18 +29,18 @@ function populateMoTable(MOnumber) {
     var ops = JSON.parse(data);
     var table = $('#operations').find('tbody');
     for(var i = 0; i < ops.length; i++){
-      var mo = ops[i]
+      var op = ops[i]
       var workButton = $('<button/>',{
         text: 'Work',
-        click: function () { alert('start work'); }
+        click: function () { workRedirect(MOnumber, op.number) }
       });
 
       table.append($('<tr>')
-        .append($('<td>').append(mo.number))
-        .append($('<td>').append(mo.department))
-        .append($('<td>').append(mo.PPH))
-        .append($('<td>').append(mo.partsCompleted))
-        .append($('<td>').append(mo.truePPH))
+        .append($('<td>').append(op.number))
+        .append($('<td>').append(op.department))
+        .append($('<td>').append(op.PPH))
+        .append($('<td>').append(op.partsCompleted))
+        .append($('<td>').append(op.truePPH))
         .append($('<td>').append(workButton))
       );
     }
@@ -68,16 +72,6 @@ function populateMoTable(MOnumber) {
 }
 
 $(document).ready(function(){
-/*  $( "#jobform" ).submit(function( event ) {
-    // Stop form from submitting normally
-    event.preventDefault();
-
-    job = $(this).find( "input[name='jid']" ).val();
-    console.log(job);
-
-    window.location = "job.html?"+$.param({id: job});
-  });*/
-
   $( "#MOsearch" ).submit(function(event) {
     event.preventDefault();
     var MO = $(this).find("input[name='MOnumber']").val();

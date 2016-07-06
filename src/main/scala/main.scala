@@ -14,19 +14,15 @@ import spark.Spark
 
 object Main {
   val MOs = scala.collection.mutable.HashMap.empty[String,MO]
-/*
-  def loadJob(id: String): Option[Job] = {
-    if(jobs.contains(id)) Some(jobs(id))
-    else None
-  }
 
-  class JobSession(val job: Job, val js: JettySession) {
-    val listener = job.register(sendMessage(_))
-    println("Session for "+job.MO+" accepted")
-    def onMessage(message: String): Unit = job.modify(message)
+  class JobSession(val job: WorkSession, val js: JettySession) {
+    println("Session for "+job.employee+" accepted")
+    def onMessage(message: String): Unit = {
+      job.count += 1
+      sendMessage(job.count.toString)
+    }
     def onClose(code: Int, reason: String): Unit = {
-      job.deregister(listener)
-      println("session for "+job.MO+" closed")
+      println("session for "+job.employee+" closed")
     }
     def sendMessage(message: String) = {
       js.getRemote.sendStringByFuture(message);
@@ -37,14 +33,24 @@ object Main {
     val connected = scala.collection.mutable.HashMap.empty[JettySession,JobSession]
     @OnWebSocketConnect
     def onConnect(remote: JettySession): Unit = {
+      //Get the socket data
       val parameters = remote.getUpgradeRequest.getParameterMap
-      val job = Option(parameters.get("id"))
-                  .flatMap(l => Option(l.get(0)))
-                  .flatMap(j => loadJob(j))
-      job match {
-        case Some(job) => connected += ((remote, new JobSession(job, remote)))
-        case None => remote.close(1008, "job connections require a valid id")
+      val mo: Try[MO] = Try( MOs( parameters.get("MO").get(0) ) )
+      val opnum: Try[Int] = Try( parameters.get("opnum").get(0).toInt )
+      val employee: Try[String] = Try( parameters.get("empl").get(0) )
+      val crewSize: Try[Int] = Try( parameters.get("crew").get(0).toInt )
+
+      //try and construct a worksession
+      val ws = for(m <- mo; o <- opnum; e <- employee; c <- crewSize) yield {
+        m.getOperation(o) match {
+          case Some(x) => x.newSession(e,c)
+          case _ => return;
+        }
       }
+
+      //pass it off to a JobSession on success, else close the socket
+      if(ws.isFailure) remote.close(1008, "Invalid Parameters")
+      else connected += ((remote, new JobSession(ws.get, remote)))
     }
     @OnWebSocketClose
     def onClose(remote: JettySession, code: Int, reason:String): Unit = {
@@ -58,11 +64,15 @@ object Main {
     def onMessage(remote: JettySession, message: String): Unit = {
       connected(remote).onMessage(message)
     }
-  }*/
+  }
 
   def main(args: Array[String]) = {
     Spark.staticFiles.externalLocation("./public")
     Spark.port(4567)
+
+    /* websocket job
+     */
+    Spark.webSocket("/job", ClickResponder.getClass);
 
     MOs("A") = {
       val m = new MO("A")
@@ -116,12 +126,7 @@ object Main {
 
 
 
-    /* websocket job
-     * connect requires query "id", being a valid job id
-     * While open, any changes to that id's count will be transmitted back to the client
-     * The client can send "up" or "down" to alter the target job's count
-     */
-    //Spark.webSocket("/job", ClickResponder.getClass);
+
     /* request a list of all jobs
      * Will return a json object
      */
