@@ -15,8 +15,10 @@ import spark.Spark
 object Main {
   val MOs = scala.collection.mutable.HashMap.empty[String,MO]
 
-  class JobSession(val job: WorkSession, val js: JettySession) {
+  class JobSession(val op: Operation, val job: WorkSession, val js: JettySession) {
     println("Session for "+job.employee+" accepted")
+    //First message should be the expected parts per hour
+    sendMessage( (op.PPH * job.crewSize.toDouble).toInt.toString )
     def onMessage(message: String): Unit = {
       job.count += 1
       sendMessage(job.count.toString)
@@ -43,14 +45,17 @@ object Main {
       //try and construct a worksession
       val ws = for(m <- mo; o <- opnum; e <- employee; c <- crewSize) yield {
         m.getOperation(o) match {
-          case Some(x) => x.newSession(e,c)
+          case Some(x) => (x,x.newSession(e,c))
           case _ => return;
         }
       }
 
       //pass it off to a JobSession on success, else close the socket
-      if(ws.isFailure) remote.close(1008, "Invalid Parameters")
-      else connected += ((remote, new JobSession(ws.get, remote)))
+      if(ws.isFailure) {
+        remote.close(1008, "Invalid Parameters")
+      } else {
+        connected +=( (remote, new JobSession(ws.get._1, ws.get._2, remote)) )
+      }
     }
     @OnWebSocketClose
     def onClose(remote: JettySession, code: Int, reason:String): Unit = {

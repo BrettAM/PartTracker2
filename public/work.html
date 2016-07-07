@@ -17,6 +17,11 @@ function hideStartup(){
   $("#working").show();
 }
 
+function updateCount(newCount){
+  $("#count").text(newCount);
+}
+var PPH = 0.0
+
 $(document).ready(function(){
   showStartup();
 
@@ -27,9 +32,14 @@ $(document).ready(function(){
     var socketAddress = "ws://"+location.hostname+":"+location.port+"/job?"
                         +$.param({MO: MO, opnum: op, empl: emp, crew: crw});
 
+    //Startup the websocket. The first message will be the expected session PPH
     var webSocket = new WebSocket(socketAddress);
-    hideStartup();
-    webSocket.onmessage = function (event) { $("#count").text(event.data); };
+    webSocket.onmessage = function (event) {
+      PPH = event.data
+      hideStartup();
+      //After the first message, all input is new count values
+      webSocket.onmessage = function (event) { updateCount(event.data); }
+    };
     webSocket.onclose = function(event) {
       showStartup();
       alert("Connection Failure");
