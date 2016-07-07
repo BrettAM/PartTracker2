@@ -18,24 +18,31 @@ function hideStartup(){
 }
 
 function updateCount(newCount){
-  $("#count").text(newCount);
+  $("#Completed").text(newCount);
 }
+
 var PPH = 0.0
+function updatePPH(newpph){
+  PPH = newpph
+  $("#ExpectedPPH").text(newpph)
+}
 
 $(document).ready(function(){
   showStartup();
 
-  $( "#start" ).submit(function(event) {
+  $( "#loginForm" ).submit(function(event) {
     event.preventDefault();
     var emp = $(this).find("input[name='Employee']").val();
     var crw = $(this).find("input[name='CrewSize']").val();
     var socketAddress = "ws://"+location.hostname+":"+location.port+"/job?"
                         +$.param({MO: MO, opnum: op, empl: emp, crew: crw});
 
+    $("#Employee").text(emp)
+
     //Startup the websocket. The first message will be the expected session PPH
     var webSocket = new WebSocket(socketAddress);
     webSocket.onmessage = function (event) {
-      PPH = event.data
+      updatePPH(event.data)
       hideStartup();
       //After the first message, all input is new count values
       webSocket.onmessage = function (event) { updateCount(event.data); }
@@ -44,11 +51,12 @@ $(document).ready(function(){
       showStartup();
       alert("Connection Failure");
     }
+
+    $("#Part").click(function(){ webSocket.send("1") });
+    $("#Start").click(function(){ webSocket.send("start") });
+    $("#Stop").click(function(){ webSocket.send("stop") });
   });
 
-  $("#Part").click(function(){ webSocket.send("1") });
-  $("#Start").click(function(){ webSocket.send("start") });
-  $("#Stop").click(function(){ webSocket.send("stop") });
 });
 // webSocket heartbeat
 </script>
@@ -56,7 +64,7 @@ $(document).ready(function(){
 <body>
 
 <div id="login">
-  <form id="start">
+  <form id="loginForm">
     <input type="text" name="Employee" placeholder="Employee Number">
     <input type="text" name="CrewSize" placeholder="Crew Size">
     <input type="submit" value="Enter">
@@ -64,8 +72,12 @@ $(document).ready(function(){
 </div>
 
 <div id="working">
-  <div id="count">0</div>
-  <button id="Part">Part</button><br>
+  Employee: <span id="Employee">0</span> <br>
+  Completed: <span id="Completed">0</span> <br>
+  Expected: <span id="Expected">0</span> <br>
+  Actual PPH: <span id="ActualPPH">0</span> <br>
+  Expected PPH: <span id="ExpectedPPH">0</span> <br>
+  <button id="Part">Count Up</button><br>
   <button id="Start">Start</button><br>
   <button id="Stop">Stop</button><br>
 </div>

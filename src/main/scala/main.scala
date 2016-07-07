@@ -47,10 +47,11 @@ object Main {
     }
 
     def onMessage(message: String): Unit = {
+      println(message)
       message match {
         case "1" => incrementPartCount()
-        case "start" => startTimer
-        case "stop" => stopTimer
+        case "start" => startTimer()
+        case "stop" => stopTimer()
         case m => System.err.println("Received bad command "+m)
       }
     }
