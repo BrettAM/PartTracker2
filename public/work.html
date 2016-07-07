@@ -44,8 +44,11 @@ $(document).ready(function(){
       showStartup();
       alert("Connection Failure");
     }
-    $("#Part").click(function(){ webSocket.send("1") });
   });
+
+  $("#Part").click(function(){ webSocket.send("1") });
+  $("#Start").click(function(){ webSocket.send("start") });
+  $("#Stop").click(function(){ webSocket.send("stop") });
 });
 // webSocket heartbeat
 </script>
@@ -63,6 +66,8 @@ $(document).ready(function(){
 <div id="working">
   <div id="count">0</div>
   <button id="Part">Part</button><br>
+  <button id="Start">Start</button><br>
+  <button id="Stop">Stop</button><br>
 </div>
 
 </body>

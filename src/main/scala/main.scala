@@ -2,6 +2,7 @@ package com
 
 import com.Serialization._
 
+import java.util.Date
 import scala.collection.JavaConversions._
 import scala.io.Source
 import scala.util.Try
@@ -19,13 +20,46 @@ object Main {
     println("Session for "+job.employee+" accepted")
     //First message should be the expected parts per hour
     sendMessage( (op.PPH * job.crewSize.toDouble).toInt.toString )
-    def onMessage(message: String): Unit = {
-      job.count += 1
-      sendMessage(job.count.toString)
+    sendMessage( job.count.toString )
+
+    var timerOn = false
+    var startTime = 0L
+
+    def incrementPartCount() = {
+      if(timerOn){
+        job.count += 1
+        sendMessage(job.count.toString)
+      }
     }
+
+    def startTimer() = {
+      if(!timerOn) {
+        timerOn = true
+        startTime = (new Date()).getTime()
+      }
+    }
+
+    def stopTimer() = {
+      if(timerOn) {
+        timerOn = false
+        job.elapsed += ((new Date()).getTime() - startTime)
+      }
+    }
+
+    def onMessage(message: String): Unit = {
+      message match {
+        case "1" => incrementPartCount()
+        case "start" => startTimer
+        case "stop" => stopTimer
+        case m => System.err.println("Received bad command "+m)
+      }
+    }
+
     def onClose(code: Int, reason: String): Unit = {
+      stopTimer()
       println("session for "+job.employee+" closed")
     }
+
     def sendMessage(message: String) = {
       js.getRemote.sendStringByFuture(message);
     }
@@ -173,6 +207,7 @@ object Main {
 
     //shutdown after receiving a line
     System.console().readLine()
+    println(toJson(MOs))
     Spark.stop()
   }
 }
