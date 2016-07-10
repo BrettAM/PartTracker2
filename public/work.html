@@ -7,6 +7,60 @@ var uri = new URI(window.location);
 var MO = uri.search(true)["MO"];
 var op = uri.search(true)["opnum"];
 
+var partsLogged;
+var expectedPPH;
+var elapsedTime;
+var timer;
+var lastPart;
+
+function initializeJob(){
+  partsLogged = 0
+  expectedPPH = 0.0
+  elapsedTime = 0
+  timer = 0
+  lastPart = 0
+}
+
+function startTimer(){
+  timer = Date.now();
+}
+
+function stopTimer(){
+  elapsedTime += getTimer();
+  timer = 0;
+}
+
+function getTimer(){
+  if(!timerOn()) return 0;
+  return (Date.now() - timer);
+}
+
+function timerOn(){
+  return (timer != 0);
+}
+
+function currentElapsedTime(){
+  return elapsedTime+getTimer();
+}
+
+function logPart(){
+  lastPart = Date.now();
+  partsLogged += 1;
+  updateDisplay();
+}
+
+function msToHours(ms){
+  return (((ms/1000.0 /*seconds*/) / 60.0) /*minutes*/ / 60.0 /*hours*/);
+}
+
+function updateDisplay(){
+  var hours = msToHours(currentElapsedTime());
+  console.log(hours);
+  $("#Completed").text(partsLogged);
+  $("#Expected").text((expectedPPH*hours).toFixed(0));
+  $("#ActualPPH").text((partsLogged/hours).toFixed(2));
+}
+
 function showStartup(){
   $("#login").show();
   $("#working").hide();
@@ -17,48 +71,60 @@ function hideStartup(){
   $("#working").show();
 }
 
-function updateCount(newCount){
-  $("#Completed").text(newCount);
-}
-
-var PPH = 0.0
-function updatePPH(newpph){
-  PPH = newpph
-  $("#ExpectedPPH").text(newpph)
-}
-
 $(document).ready(function(){
   showStartup();
 
   $( "#loginForm" ).submit(function(event) {
     event.preventDefault();
+    initializeJob();
+
     var emp = $(this).find("input[name='Employee']").val();
     var crw = $(this).find("input[name='CrewSize']").val();
     var socketAddress = "ws://"+location.hostname+":"+location.port+"/job?"
                         +$.param({MO: MO, opnum: op, empl: emp, crew: crw});
 
+    // Update Employee field on the page
     $("#Employee").text(emp)
+
+    // Start graphic update timer
+    var refresh = window.setInterval(updateDisplay, 50);
 
     //Startup the websocket. The first message will be the expected session PPH
     var webSocket = new WebSocket(socketAddress);
     webSocket.onmessage = function (event) {
-      updatePPH(event.data)
+      expectedPPH = Number(event.data)
+      $("#ExpectedPPH").text(expectedPPH)
       hideStartup();
-      //After the first message, all input is new count values
-      webSocket.onmessage = function (event) { updateCount(event.data); }
+
+      webSocket.onmessage = function (event) { console.log("Received "+data); }
     };
     webSocket.onclose = function(event) {
       showStartup();
+      window.clearInterval(refresh);
       alert("Connection Failure");
     }
 
-    $("#Part").click(function(){ webSocket.send("1") });
-    $("#Start").click(function(){ webSocket.send("start") });
-    $("#Stop").click(function(){ webSocket.send("stop") });
+    var sendUpdate = function () {
+      if(webSocket.readyState == WebSocket.OPEN)
+        webSocket.send(
+          JSON.stringify({count: partsLogged, elapsed: currentElapsedTime()})
+        );
+    };
+
+    $("#Part").click(function(){
+      if(timerOn()){
+        logPart();
+        sendUpdate();
+      }
+    });
+    $("#Start").click(function(){ startTimer(); });
+    $("#Stop").click(function(){ stopTimer(); });
   });
 
 });
+// close old webSockets?
 // webSocket heartbeat
+// Server disconnect warning
 </script>
 </head>
 <body>

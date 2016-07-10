@@ -15,54 +15,29 @@ import spark.Spark
 object Main {
   val MOs = scala.collection.mutable.HashMap.empty[String,MO]
 
+  class WorkPageMessage(val count: Long, val elapsed: Long)
   class JobSession(val op: Operation, val job: WorkSession, val js: JettySession) {
     println("Session for "+job.employee+" accepted")
+
     //First message should be the expected parts per hour
-    sendMessage( (op.PPH * job.crewSize.toDouble).toInt.toString )
-    sendMessage( job.count.toString )
-
-    var timerOn = false
-    var startTime = 0L
-
-    def incrementPartCount() = {
-      if(timerOn){
-        job.count += 1
-        sendMessage(job.count.toString)
-      }
-    }
-
-    def startTimer() = {
-      if(!timerOn) {
-        timerOn = true
-        startTime = System.currentTimeMillis
-      }
-    }
-
-    def stopTimer() = {
-      if(timerOn) {
-        timerOn = false
-        job.elapsed += (System.currentTimeMillis - startTime)
-      }
-    }
+    sendMessage( (op.PPH * job.crewSize.toDouble).toString )
 
     def onMessage(message: String): Unit = {
-      println(message)
-      message match {
-        case "1" => incrementPartCount()
-        case "start" => startTimer()
-        case "stop" => stopTimer()
-        case m => System.err.println("Received bad command "+m)
+      System.err.println("Received message "+message)
+      val update: WorkPageMessage = fromJson[WorkPageMessage](message)
+      if(update.count < job.count || update.elapsed < job.elapsed){
+        System.err.println("Invalid update from job page")
+      } else {
+        job.count = update.count
+        job.elapsed = update.elapsed
       }
     }
 
     def onClose(code: Int, reason: String): Unit = {
-      stopTimer()
       println("session for "+job.employee+" closed")
     }
 
-    def sendMessage(message: String) = {
-      js.getRemote.sendStringByFuture(message);
-    }
+    def sendMessage(message: String) = js.getRemote.sendStringByFuture(message);
   }
 
   @WebSocket object ClickResponder{
