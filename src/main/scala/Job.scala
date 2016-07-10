@@ -1,7 +1,5 @@
 package com
 
-import java.util.Date
-
 // A grouping of Operations
 class MO(val id: String){
   private val operations = scala.collection.mutable.HashMap.empty[String,Operation]
@@ -48,7 +46,7 @@ class WorkSession(
   val employee: String,
   val crewSize: Int
   ){
-  val start: Long = (new Date()).getTime()
+  val start: Long = System.currentTimeMillis()
   var elapsed: Long = 0
   var count: Long = 0
   override def toString: String = s"WorkSession by $employee with $count clicks"

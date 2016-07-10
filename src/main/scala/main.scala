@@ -2,7 +2,6 @@ package com
 
 import com.Serialization._
 
-import java.util.Date
 import scala.collection.JavaConversions._
 import scala.io.Source
 import scala.util.Try
@@ -35,14 +34,14 @@ object Main {
     def startTimer() = {
       if(!timerOn) {
         timerOn = true
-        startTime = (new Date()).getTime()
+        startTime = System.currentTimeMillis
       }
     }
 
     def stopTimer() = {
       if(timerOn) {
         timerOn = false
-        job.elapsed += ((new Date()).getTime() - startTime)
+        job.elapsed += (System.currentTimeMillis - startTime)
       }
     }
 
@@ -107,13 +106,7 @@ object Main {
   }
 
   def main(args: Array[String]) = {
-    Spark.staticFiles.externalLocation("./public")
-    Spark.port(4567)
-
-    /* websocket job
-     */
-    Spark.webSocket("/job", ClickResponder.getClass);
-
+    //debug database entries
     MOs("A") = {
       val m = new MO("A")
       m.addOperation(new Operation(1,"Paint",10))
@@ -122,6 +115,19 @@ object Main {
       m
     }
 
+    //Initialize webserver
+    Spark.staticFiles.externalLocation("./public")
+    Spark.port(4567)
+
+    /* websocket job
+     */
+    Spark.webSocket("/job", ClickResponder.getClass);
+
+    /**
+     * Retrieve A summary of a particular MO
+     * Specify the MO identifier using query parameter "MO"
+     * Returns an empty string if the MO does not exist
+     */
     get("/mo"){ (req, res) =>
       val id = req.queryParams("MO")
       if(MOs.contains(id)){
@@ -133,6 +139,11 @@ object Main {
       }
     }
 
+    /**
+     * Register a new MO identifier
+     * Specify the MO identifier using query parameter "MO"
+     * If the specified MO already exists, no action is taken
+     */
     post("/mo"){ (req, res) =>
       val id = req.queryParams("MO")
       if(!MOs.contains(id)) {
@@ -142,6 +153,13 @@ object Main {
       ""
     }
 
+    /**
+     * Register a new Operation
+     * MO The MO to register the operation under
+     * dept The department the Operation is associated with
+     * opnum The operation's index (must be an integer)
+     * pph The operations parts per hour (must be a real number)
+     */
     post("/operation"){ (req, res) =>
       val moid = req.queryParams("MO")
       val department = req.queryParams("dept")
@@ -164,49 +182,7 @@ object Main {
       }
     }
 
-
-
-
-    /* request a list of all jobs
-     * Will return a json object
-     */
-    /*get("/joblist"){ (req, res) =>
-      val rtn: String = gson.toJson(asJavaIterable(jobs.values))
-      System.out.println(rtn)
-      rtn
-    }*/
-    /* Request information about a specific job
-     * Job is determined by the "id" query paramater
-     * Will return a json object if the job exists or an empty string otherwise
-     */
-    /*get("/jobdata"){ (req, res) =>
-      println("Get request")
-      val id = req.queryParams("id")
-      loadJob(id) match {
-        case Some(job) => gson.toJson(job)
-        case None => ""
-      }
-    }*/
-    /* Register a new job with the system
-     * required data (as json): MO number, Operation number, Department,
-     *     parts per hour, crew size, employee number
-     * ex. {"MO":"1","OP":"2","Dept":"Paint","PPH":3,"Crew":1,"Employee":"A"}
-     * will return true if the job is registered successfully, false otherwise
-     */
-    /*post("/jobdata"){ (req, res) =>
-      println("Post request: "+req.body)
-      val job = gson.fromJson(req.body, classOf[Job])
-      println(job)
-      if(jobs.contains(job.MO)){
-        "false"
-      } else {
-        jobs +=( (job.MO, job) )
-        "true"
-      }
-    }*/
-
-
-    //shutdown after receiving a line
+    //shutdown after receiving any input
     System.console().readLine()
     println(toJson(MOs))
     Spark.stop()
