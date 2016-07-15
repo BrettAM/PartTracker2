@@ -38,6 +38,8 @@ object Main {
     }
 
     def sendMessage(message: String) = js.getRemote.sendStringByFuture(message);
+
+    def summarize = job
   }
 
   @WebSocket object ClickResponder{
@@ -78,6 +80,8 @@ object Main {
     def onMessage(remote: JettySession, message: String): Unit = {
       connected(remote).onMessage(message)
     }
+
+    def activeSessions: Seq[JobSession] = connected.values.toSeq
   }
 
   def main(args: Array[String]) = {
@@ -97,6 +101,14 @@ object Main {
     /* websocket job
      */
     Spark.webSocket("/job", ClickResponder.getClass);
+
+    /**
+     * Retrieve A list of all active jobs
+     *
+     */
+    get("/active") { (req, res) =>
+      toJson(ClickResponder.activeSessions.map(_.summarize))
+    }
 
     /**
      * Retrieve A summary of a particular MO
