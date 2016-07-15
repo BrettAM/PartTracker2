@@ -1,5 +1,19 @@
 <html>
 <head>
+<style>
+#progressBar {
+  position: relative;
+  width: 100%;
+  height: 10px;
+  background-color: #101090;
+}
+#progressFill {
+  position: absolute;
+  width: 10%;
+  height: 100%;
+  background-color: #4CAF50;
+}
+</style>
 <script src="jquery.js"></script>
 <script src="URI.js"></script>
 <script>
@@ -55,10 +69,13 @@ function msToHours(ms){
 
 function updateDisplay(){
   var hours = msToHours(currentElapsedTime());
-  console.log(hours);
+  var delta = msToHours(Date.now() - lastPart);
+  var nextPartPercentage = Math.min(expectedPPH*delta, 1.0) * 100;
+
   $("#Completed").text(partsLogged);
   $("#Expected").text((expectedPPH*hours).toFixed(0));
-  $("#ActualPPH").text((partsLogged/hours).toFixed(2));
+  $("#ActualPPH").text(hours==0 ? 0.0 : (partsLogged/hours).toFixed(2) );
+  $("#progressFill").width(timerOn() ? nextPartPercentage+'%' : 0);
 }
 
 function showStartup(){
@@ -117,12 +134,18 @@ $(document).ready(function(){
         sendUpdate();
       }
     });
-    $("#Start").click(function(){ startTimer(); });
-    $("#Stop").click(function(){ stopTimer(); });
+    $("#Start").click(function(){
+      if(!timerOn()){
+        startTimer();
+        lastPart = Date.now();
+      }
+    });
+    $("#Stop").click(function(){
+      if(timerOn()) stopTimer();
+    });
   });
 
 });
-// close old webSockets?
 // webSocket heartbeat
 // Server disconnect warning
 </script>
@@ -143,6 +166,12 @@ $(document).ready(function(){
   Expected: <span id="Expected">0</span> <br>
   Actual PPH: <span id="ActualPPH">0</span> <br>
   Expected PPH: <span id="ExpectedPPH">0</span> <br>
+
+  <div id="progressBar">
+    <div id="progressFill">
+    </div>
+  </div>
+
   <button id="Part">Count Up</button><br>
   <button id="Start">Start</button><br>
   <button id="Stop">Stop</button><br>
