@@ -37,43 +37,42 @@ function msToHours(ms){
   return (((ms/1000.0 /*seconds*/) / 60.0) /*minutes*/ / 60.0 /*hours*/);
 }
 
+/** Responsible for local state in a job work session */
+function Session(expectedPPH, transmit){
+  this.partsLogged = 0;
+  this.expectedPPH = expectedPPH;
+  this.timeLastPart = 0;
+  this.timer = new Timer();
+  this.logPart = function () {
+    if(!this.timer.isOn()) return;
+    this.timeLastPart = Date.now();
+    this.partsLogged += 1;
+    transmit({count: this.partsLogged, elapsed: this.timer.getTotal()});
+  };
+  this.start = function () {
+    this.timer.start();
+    this.timeLastPart = Date.now();
+  };
+  this.stop = function () {
+    this.timer.stop();
+  };
+  this.actualPPH = function() {
+    var hours = msToHours(this.timer.getTotal());
+    return (hours==0) ? 0.0 : (this.partsLogged/hours);
+  }
+  this.expectedPartCount = function () {
+    return this.expectedPPH * msToHours(this.timer.getTotal());
+  }
+  this.percentageNext = function () {
+    var delta = msToHours(Date.now() - this.timeLastPart);
+    var nextPartPercentage = Math.min(this.expectedPPH*delta, 1.0) * 100;
+    return (this.timer.isOn()) ? nextPartPercentage : 0.0;
+  }
+}
+
 var uri = new URI(window.location);
 var MO = uri.search(true)["MO"];
 var op = uri.search(true)["opnum"];
-
-var partsLogged;
-var expectedPPH;
-var lastPart;
-var timer;
-
-function initializeJob(){
-  partsLogged = 0
-  expectedPPH = 0.0
-  lastPart = 0
-  timer = new Timer();
-}
-
-function logPart(){
-  lastPart = Date.now();
-  partsLogged += 1;
-  updateCompleted();
-}
-
-function updateCompleted(){
-  var hours = msToHours(timer.getTotal());
-
-  $("#Completed").text(partsLogged);
-  $("#ActualPPH").text(hours==0 ? 0.0 : (partsLogged/hours).toFixed(2) );
-}
-
-function updateExpected(){
-  var hours = msToHours(timer.getTotal());
-  var delta = msToHours(Date.now() - lastPart);
-  var nextPartPercentage = Math.min(expectedPPH*delta, 1.0) * 100;
-
-  $("#Expected").text((expectedPPH*hours).toFixed(0));
-  $("#progressFill").width(timer.isOn() ? nextPartPercentage+'%' : 0);
-}
 
 function showStartup(){
   $("#login").show();
@@ -85,69 +84,86 @@ function hideStartup(){
   $("#working").show();
 }
 
+/**
+ * Initializes UI interaction with the websocket's job session
+ * @return A window interval ID that is running the ui updates
+ */
+function startWork(expectedPPH, socket){
+  function sendToSocket(data){
+    socket.send(JSON.stringify(data));
+  }
+
+  function updateCompleted(){
+    $("#Completed").text(session.partsLogged);
+    $("#ActualPPH").text(session.actualPPH().toFixed(2));
+  }
+
+  function updateExpected(){
+    $("#Expected").text(session.expectedPartCount().toFixed(0));
+    $("#progressFill").width(session.percentageNext()+'%');
+  }
+
+  var session = new Session(expectedPPH, sendToSocket);
+  var refresh = window.setInterval(updateExpected, 50);
+
+  $("#Part").click(function(){
+    session.logPart();
+    updateCompleted();
+  });
+
+  $("#Toggle").click(function(){
+    if(session.timer.isOn()){
+      session.stop();
+      $(this).text("Start");
+      $("#Part").prop("disabled",true);
+    } else {
+      session.start();
+      $(this).text("Stop");
+      $("#Part").prop("disabled",false);
+    }
+  });
+
+  updateCompleted();
+  updateExpected();
+  hideStartup();
+
+  return refresh;
+}
+
 $(document).ready(function(){
   showStartup();
-
   $( "#loginForm" ).submit(function(event) {
     event.preventDefault();
-    initializeJob();
 
+    // Read input fields
     var emp = $(this).find("input[name='Employee']").val();
     var crw = $(this).find("input[name='CrewSize']").val();
-    var socketAddress = "ws://"+location.hostname+":"+location.port+"/job?"
-                        +$.param({MO: MO, opnum: op, empl: emp, crew: crw});
 
     // Update Employee field on the page
     $("#Employee").text(emp)
 
-    // Start graphic update timer
-    var refresh = window.setInterval(updateExpected, 50);
+    // Construct websocket request address
+    var socketAddress = "ws://"+location.hostname+":"+location.port+"/job?"
+                        +$.param({MO: MO, opnum: op, empl: emp, crew: crw});
 
     //Startup the websocket. The first message will be the expected session PPH
     var webSocket = new WebSocket(socketAddress);
-    var heartbeat = window.setInterval(function(){ webSocket.send(""); }, 10000);
+    var heartbeat = window.setInterval(function(){ webSocket.send(""); }, 60000);
+    var uiTimer; // variable to store UI update timer
     webSocket.onmessage = function (event) {
-      expectedPPH = Number(event.data)
-      $("#ExpectedPPH").text(expectedPPH)
-      hideStartup();
-
+      var expectedPPH = Number(event.data);
+      $("#ExpectedPPH").text(expectedPPH);
+      uiTimer = startWork(expectedPPH, webSocket);
       webSocket.onmessage = function (event) { console.log("Received "+data); }
     };
     webSocket.onclose = function(event) {
       showStartup();
-      window.clearInterval(refresh);
+      window.clearInterval(uiTimer);
       window.clearInterval(heartbeat);
       alert("Connection Failure");
     }
-
-    var sendUpdate = function () {
-      if(webSocket.readyState == WebSocket.OPEN)
-        webSocket.send(
-          JSON.stringify({count: partsLogged, elapsed: timer.getTotal()})
-        );
-    };
-
-    $("#Part").click(function(){
-      if(timer.isOn()){
-        logPart();
-        sendUpdate();
-      }
-    });
-    $("#Toggle").click(function(){
-      if(timer.isOn()){
-        timer.stop();
-        $(this).text("Start");
-        $("#Part").prop("disabled",true);
-      } else {
-        timer.start();
-        $(this).text("Stop");
-        $("#Part").prop("disabled",false);
-        lastPart = Date.now();
-      }
-    });
   });
 });
-// webSocket heartbeat
 </script>
 </head>
 <body>
