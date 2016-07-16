@@ -60,21 +60,26 @@ function currentElapsedTime(){
 function logPart(){
   lastPart = Date.now();
   partsLogged += 1;
-  updateDisplay();
+  updateCompleted();
 }
 
 function msToHours(ms){
   return (((ms/1000.0 /*seconds*/) / 60.0) /*minutes*/ / 60.0 /*hours*/);
 }
 
-function updateDisplay(){
+function updateCompleted(){
+  var hours = msToHours(currentElapsedTime());
+
+  $("#Completed").text(partsLogged);
+  $("#ActualPPH").text(hours==0 ? 0.0 : (partsLogged/hours).toFixed(2) );
+}
+
+function updateExpected(){
   var hours = msToHours(currentElapsedTime());
   var delta = msToHours(Date.now() - lastPart);
   var nextPartPercentage = Math.min(expectedPPH*delta, 1.0) * 100;
 
-  $("#Completed").text(partsLogged);
   $("#Expected").text((expectedPPH*hours).toFixed(0));
-  $("#ActualPPH").text(hours==0 ? 0.0 : (partsLogged/hours).toFixed(2) );
   $("#progressFill").width(timerOn() ? nextPartPercentage+'%' : 0);
 }
 
@@ -104,10 +109,11 @@ $(document).ready(function(){
     $("#Employee").text(emp)
 
     // Start graphic update timer
-    var refresh = window.setInterval(updateDisplay, 50);
+    var refresh = window.setInterval(updateExpected, 50);
 
     //Startup the websocket. The first message will be the expected session PPH
     var webSocket = new WebSocket(socketAddress);
+    var heartbeat = window.setInterval(function(){ webSocket.send(""); }, 10000);
     webSocket.onmessage = function (event) {
       expectedPPH = Number(event.data)
       $("#ExpectedPPH").text(expectedPPH)
@@ -118,6 +124,7 @@ $(document).ready(function(){
     webSocket.onclose = function(event) {
       showStartup();
       window.clearInterval(refresh);
+      window.clearInterval(heartbeat);
       alert("Connection Failure");
     }
 
@@ -134,20 +141,21 @@ $(document).ready(function(){
         sendUpdate();
       }
     });
-    $("#Start").click(function(){
-      if(!timerOn()){
+    $("#Toggle").click(function(){
+      if(timerOn()){
+        stopTimer();
+        $(this).text("Start");
+        $("#Part").prop("disabled",true);
+      } else {
         startTimer();
+        $(this).text("Stop");
+        $("#Part").prop("disabled",false);
         lastPart = Date.now();
       }
     });
-    $("#Stop").click(function(){
-      if(timerOn()) stopTimer();
-    });
   });
-
 });
 // webSocket heartbeat
-// Server disconnect warning
 </script>
 </head>
 <body>
@@ -172,9 +180,8 @@ $(document).ready(function(){
     </div>
   </div>
 
-  <button id="Part">Count Up</button><br>
-  <button id="Start">Start</button><br>
-  <button id="Stop">Stop</button><br>
+  <button id="Part" disabled>Count Up</button><br>
+  <button id="Toggle">Start</button><br>
 </div>
 
 </body>

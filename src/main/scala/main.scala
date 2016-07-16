@@ -25,6 +25,10 @@ object Main {
     def onMessage(message: String): Unit = {
       System.err.println("Received message "+message)
       val update: WorkPageMessage = fromJson[WorkPageMessage](message)
+
+      // Most likely a heartbeat empty string in this case
+      if(update == null) return
+
       if(update.count < job.count || update.elapsed < job.elapsed){
         System.err.println("Invalid update from job page")
       } else {
