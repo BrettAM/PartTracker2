@@ -17,44 +17,40 @@
 <script src="jquery.js"></script>
 <script src="URI.js"></script>
 <script>
+
+function Timer(){
+  this.elapsedTime = 0;
+  this.triggerTime = 0;
+  this.start = function() { this.triggerTime = Date.now(); };
+  this.stop = function() {
+    this.elapsedTime += this.getTime();
+    this.triggerTime = 0;
+  };
+  this.getTime = function() {
+    return (this.isOn())? (Date.now()-this.triggerTime) : 0;
+  };
+  this.getTotal = function() { return this.elapsedTime + this.getTime(); };
+  this.isOn = function() { return (this.triggerTime != 0); }
+}
+
+function msToHours(ms){
+  return (((ms/1000.0 /*seconds*/) / 60.0) /*minutes*/ / 60.0 /*hours*/);
+}
+
 var uri = new URI(window.location);
 var MO = uri.search(true)["MO"];
 var op = uri.search(true)["opnum"];
 
 var partsLogged;
 var expectedPPH;
-var elapsedTime;
-var timer;
 var lastPart;
+var timer;
 
 function initializeJob(){
   partsLogged = 0
   expectedPPH = 0.0
-  elapsedTime = 0
-  timer = 0
   lastPart = 0
-}
-
-function startTimer(){
-  timer = Date.now();
-}
-
-function stopTimer(){
-  elapsedTime += getTimer();
-  timer = 0;
-}
-
-function getTimer(){
-  if(!timerOn()) return 0;
-  return (Date.now() - timer);
-}
-
-function timerOn(){
-  return (timer != 0);
-}
-
-function currentElapsedTime(){
-  return elapsedTime+getTimer();
+  timer = new Timer();
 }
 
 function logPart(){
@@ -63,24 +59,20 @@ function logPart(){
   updateCompleted();
 }
 
-function msToHours(ms){
-  return (((ms/1000.0 /*seconds*/) / 60.0) /*minutes*/ / 60.0 /*hours*/);
-}
-
 function updateCompleted(){
-  var hours = msToHours(currentElapsedTime());
+  var hours = msToHours(timer.getTotal());
 
   $("#Completed").text(partsLogged);
   $("#ActualPPH").text(hours==0 ? 0.0 : (partsLogged/hours).toFixed(2) );
 }
 
 function updateExpected(){
-  var hours = msToHours(currentElapsedTime());
+  var hours = msToHours(timer.getTotal());
   var delta = msToHours(Date.now() - lastPart);
   var nextPartPercentage = Math.min(expectedPPH*delta, 1.0) * 100;
 
   $("#Expected").text((expectedPPH*hours).toFixed(0));
-  $("#progressFill").width(timerOn() ? nextPartPercentage+'%' : 0);
+  $("#progressFill").width(timer.isOn() ? nextPartPercentage+'%' : 0);
 }
 
 function showStartup(){
@@ -131,23 +123,23 @@ $(document).ready(function(){
     var sendUpdate = function () {
       if(webSocket.readyState == WebSocket.OPEN)
         webSocket.send(
-          JSON.stringify({count: partsLogged, elapsed: currentElapsedTime()})
+          JSON.stringify({count: partsLogged, elapsed: timer.getTotal()})
         );
     };
 
     $("#Part").click(function(){
-      if(timerOn()){
+      if(timer.isOn()){
         logPart();
         sendUpdate();
       }
     });
     $("#Toggle").click(function(){
-      if(timerOn()){
-        stopTimer();
+      if(timer.isOn()){
+        timer.stop();
         $(this).text("Start");
         $("#Part").prop("disabled",true);
       } else {
-        startTimer();
+        timer.start();
         $(this).text("Stop");
         $("#Part").prop("disabled",false);
         lastPart = Date.now();
