@@ -35,10 +35,16 @@ class Operation(
     s
   }
 
-  class OperationSummary(val number: Int, val department: String,
-                         val PPH: Double, val partsCompleted: Long,
-                         val truePPH: Double){}
-  def summary = new OperationSummary(number, department, PPH, completed, 0.0)
+  def actualPPH: Double = Job.calculatePPH(completed, totalTime)
+
+  class OperationSummary(){
+    val number: Int = Operation.this.number
+    val department: String = Operation.this.department
+    val PPH: Double = Operation.this.PPH
+    val partsCompleted: Long = completed
+    val truePPH: Double = actualPPH
+  }
+  def summary = new OperationSummary()
 }
 
 // A single instance of working on an Operation
@@ -50,9 +56,16 @@ class WorkSession(
   var elapsed: Long = 0
   var count: Long = 0
   override def toString: String = s"WorkSession by $employee with $count clicks"
-  def actualPPH: Double = {
-    val millisecondsPerHour = 60.0/*minutes*/ * 60.0/*seconds*/ * 1000.0/*ms*/;
-    val hours = elapsed / millisecondsPerHour
-    count.toDouble / hours
+  def actualPPH: Double = Job.calculatePPH(count, elapsed)
+}
+
+object Job{
+  val millisecondsPerHour = 60.0/*minutes*/ * 60.0/*seconds*/ * 1000.0/*ms*/;
+  def calculatePPH(parts: Long, milliseconds: Long) = {
+    if(milliseconds == 0) 0.0
+    else {
+      val hours: Double = milliseconds / millisecondsPerHour
+      parts.toDouble / hours
+    }
   }
 }
