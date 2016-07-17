@@ -161,7 +161,7 @@ $(document).ready(function(){
     var workSession;
     webSocket.onmessage = function (event) {
       var expectedPPH = Number(event.data);
-      $("#ExpectedPPH").text(expectedPPH);
+      $("#ExpectedPPH").text(expectedPPH.toFixed(2));
       workSession = startWork(expectedPPH, webSocket);
       webSocket.onmessage = function (event) { console.log("Received "+data); }
     };

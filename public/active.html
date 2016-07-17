@@ -89,7 +89,7 @@ $(document).ready(function(){
         .append($('<td>').append(dateString))
         .append($('<td>').append(elapsedString))
         .append($('<td>').append(s.count))
-        .append($('<td>').append(s.ExpectedPPH))
+        .append($('<td>').append(s.ExpectedPPH.toFixed(2)))
         .append($('<td>').append(s.ActualPPH.toFixed(2)))
       );
     }
