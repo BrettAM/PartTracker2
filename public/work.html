@@ -47,6 +47,9 @@ function Session(expectedPPH, transmit){
     if(!this.timer.isOn()) return;
     this.timeLastPart = Date.now();
     this.partsLogged += 1;
+    this.sendUpdate();
+  };
+  this.sendUpdate = function () {
     transmit({count: this.partsLogged, elapsed: this.timer.getTotal()});
   };
   this.start = function () {
@@ -86,7 +89,8 @@ function hideStartup(){
 
 /**
  * Initializes UI interaction with the websocket's job session
- * @return A window interval ID that is running the ui updates
+ * @return A work session object supporting a "shutdown" command that stops
+ *             internal timers
  */
 function startWork(expectedPPH, socket){
   function sendToSocket(data){
@@ -105,6 +109,7 @@ function startWork(expectedPPH, socket){
 
   var session = new Session(expectedPPH, sendToSocket);
   var refresh = window.setInterval(updateExpected, 50);
+  var heartbeat = window.setInterval(function(){session.sendUpdate()},30000);
 
   $("#Part").click(function(){
     session.logPart();
@@ -127,7 +132,12 @@ function startWork(expectedPPH, socket){
   updateExpected();
   hideStartup();
 
-  return refresh;
+  return {
+    shutdown: function() {
+      window.clearInterval(refresh);
+      window.clearInterval(heartbeat);
+    }
+  };
 }
 
 $(document).ready(function(){
@@ -148,18 +158,16 @@ $(document).ready(function(){
 
     //Startup the websocket. The first message will be the expected session PPH
     var webSocket = new WebSocket(socketAddress);
-    var heartbeat = window.setInterval(function(){ webSocket.send(""); }, 60000);
-    var uiTimer; // variable to store UI update timer
+    var workSession;
     webSocket.onmessage = function (event) {
       var expectedPPH = Number(event.data);
       $("#ExpectedPPH").text(expectedPPH);
-      uiTimer = startWork(expectedPPH, webSocket);
+      workSession = startWork(expectedPPH, webSocket);
       webSocket.onmessage = function (event) { console.log("Received "+data); }
     };
     webSocket.onclose = function(event) {
       showStartup();
-      window.clearInterval(uiTimer);
-      window.clearInterval(heartbeat);
+      if(workSession != null) workSession.shutdown();
       alert("Connection Failure");
     }
   });
