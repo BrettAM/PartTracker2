@@ -16,17 +16,23 @@ object Main {
   val MOs = scala.collection.mutable.HashMap.empty[String,MO]
 
   class WorkPageMessage(val count: Long, val elapsed: Long)
-  class JobSession(val op: Operation, val job: WorkSession, val js: JettySession) {
+
+  class JobSession(
+    val mo: MO,
+    val op: Operation,
+    val job: WorkSession,
+    val js: JettySession
+  ) {
     println("Session for "+job.employee+" accepted")
 
+    val expectedPPH = (op.PPH * job.crewSize.toDouble)
     //First message should be the expected parts per hour
-    sendMessage( (op.PPH * job.crewSize.toDouble).toString )
+    sendMessage( expectedPPH.toString )
 
     def onMessage(message: String): Unit = {
       System.err.println("Received message "+message)
-      val update: WorkPageMessage = fromJson[WorkPageMessage](message)
 
-      // Most likely a heartbeat empty string in this case
+      val update: WorkPageMessage = fromJson[WorkPageMessage](message)
       if(update == null) return
 
       if(update.count < job.count || update.elapsed < job.elapsed){
@@ -43,7 +49,18 @@ object Main {
 
     def sendMessage(message: String) = js.getRemote.sendStringByFuture(message);
 
-    def summarize = job
+    class JobSessionSummary(){
+      val MO: String = mo.id
+      val opnum: Int = op.number
+      val Employee: String = job.employee
+      val crewSize: Int = job.crewSize
+      val StartTime: Long = job.start
+      val ElapsedTime: Long = job.elapsed
+      val count: Long = job.count
+      val ExpectedPPH: Double = expectedPPH
+      val ActualPPH: Double = job.actualPPH
+    }
+    def summarize = new JobSessionSummary
   }
 
   @WebSocket object ClickResponder{
@@ -60,7 +77,7 @@ object Main {
       //try and construct a worksession
       val ws = for(m <- mo; o <- opnum; e <- employee; c <- crewSize) yield {
         m.getOperation(o) match {
-          case Some(x) => (x,x.newSession(e,c))
+          case Some(x) => (m,x,x.newSession(e,c))
           case _ => return;
         }
       }
@@ -69,7 +86,8 @@ object Main {
       if(ws.isFailure) {
         remote.close(1008, "Invalid Parameters")
       } else {
-        connected +=( (remote, new JobSession(ws.get._1, ws.get._2, remote)) )
+        val d = ws.get
+        connected +=( (remote, new JobSession(d._1, d._2, d._3, remote)) )
       }
     }
     @OnWebSocketClose

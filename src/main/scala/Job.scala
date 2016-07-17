@@ -50,4 +50,5 @@ class WorkSession(
   var elapsed: Long = 0
   var count: Long = 0
   override def toString: String = s"WorkSession by $employee with $count clicks"
+  def actualPPH: Double = 0.0
 }

@@ -2,18 +2,6 @@
 <head>
 <script src="jquery.js"></script>
 <script>
-
-function registerNewOperation(MO, number, dept, pph){
-  $.post("operation", {MO: MO, opnum: number, dept: dept, PPH: pph}, function(data){
-    if(data != "") alert(data);
-    else populateMoTable(MO); //repopulate table after changes
-  });
-}
-
-function workRedirect(MO, operation) {
-  window.location = "work.html?"+$.param({MO: MO, opnum: operation})
-}
-
 function populateMoTable(MOnumber) {
   $.get("mo", {MO: MOnumber}, function(data){
     console.log(data);
@@ -70,38 +58,59 @@ function populateMoTable(MOnumber) {
     );
   });
 }
-
 $(document).ready(function(){
-  $( "#MOsearch" ).submit(function(event) {
-    event.preventDefault();
-    var MO = $(this).find("input[name='MOnumber']").val();
-    $.post("mo", {MO: MO}, function(data){ // Create the MO
-      populateMoTable(MO);
-    });
+  $("#Sessions").hide();
+
+  $.get("active", function(data){
+    // clear all but the first row of the table
+    $("#Sessions").find("tr:gt(0)").remove()
+
+    // Fill the table with this MO's data
+    var sessions = JSON.parse(data);
+    var table = $('#Sessions').find('tbody');
+    for(var i = 0; i < sessions.length; i++){
+      var s = sessions[i];
+
+      var startDate = new Date(s.StartTime);
+      var dateString = startDate.toLocaleString('en-US',
+        { hour: 'numeric', hour12: true, minute: "2-digit" });
+      //startDate.getHours()+":"+startDate.getMinutes();
+      var elapsed = s.ElapsedTime;
+      function hours(ms) {   return (((ms / 1000) / 60) / 60); };
+      function minutes(ms) { return (( ms / 1000) / 60) % 60; };
+      var elapsedString = hours(elapsed).toFixed(0)+":"+minutes(elapsed).toFixed(0);
+
+      table.append($('<tr>')
+        .append($('<td>').append(s.MO))
+        .append($('<td>').append(s.opnum))
+        .append($('<td>').append(s.Employee))
+        .append($('<td>').append(s.crewSize))
+        .append($('<td>').append(dateString))
+        .append($('<td>').append(elapsedString))
+        .append($('<td>').append(s.count))
+        .append($('<td>').append(s.ExpectedPPH))
+        .append($('<td>').append(s.ActualPPH))
+      );
+    }
+
+    $("#Sessions").show();
   });
 });
 </script>
 </head>
 <body>
 
-<a href="active.html">Active sessions</a>
-
-<div>
-  <form action="/" id="MOsearch">
-    Search MOs
-    <input type="text" name="MOnumber" placeholder="MO#">
-    <input type="submit" value="Enter">
-  </form>
-</div>
-
-<table style="width:100%" id="operations">
+<table style="width:100%" id="Sessions">
   <tr>
-    <td>Operation Number</td>
-    <td>Department</td>
-    <td>PPH</td>
-    <td>Completed</td>
+    <td>MO</td>
+    <td>Op #</td>
+    <td>Employee</td>
+    <td>Crew Size</td>
+    <td>Start Time</td>
+    <td>Working Time</td>
+    <td>Count</td>
+    <td>Expected PPH</td>
     <td>Actual PPH</td>
-    <td>Action</td>
   </tr>
 </table>
 
