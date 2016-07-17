@@ -14,6 +14,13 @@ function workRedirect(MO, operation) {
   window.location = "work.html?"+$.param({MO: MO, opnum: operation})
 }
 
+function createRedirectButton(Name, mo, opNum) {
+  return $('<button/>', {
+    text: Name,
+    click: function() { workRedirect(mo, opNum); }
+  });
+}
+
 function populateMoTable(MOnumber) {
   $.get("mo", {MO: MOnumber}, function(data){
     console.log(data);
@@ -30,10 +37,6 @@ function populateMoTable(MOnumber) {
     var table = $('#operations').find('tbody');
     for(var i = 0; i < ops.length; i++){
       var op = ops[i]
-      var workButton = $('<button/>',{
-        text: 'Work',
-        click: function () { workRedirect(MOnumber, op.number) }
-      });
 
       table.append($('<tr>')
         .append($('<td>').append(op.number))
@@ -41,7 +44,10 @@ function populateMoTable(MOnumber) {
         .append($('<td>').append(op.PPH))
         .append($('<td>').append(op.partsCompleted))
         .append($('<td>').append(op.truePPH.toFixed(2)))
-        .append($('<td>').append(workButton))
+        .append($('<td>').append(
+            createRedirectButton('Work', MOnumber, op.number)
+          )
+        )
       );
     }
 
