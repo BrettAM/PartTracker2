@@ -40,7 +40,7 @@ function populateMoTable(MOnumber) {
         .append($('<td>').append(op.department))
         .append($('<td>').append(op.PPH))
         .append($('<td>').append(op.partsCompleted))
-        .append($('<td>').append(op.truePPH))
+        .append($('<td>').append(op.truePPH.toFixed(2)))
         .append($('<td>').append(workButton))
       );
     }
@@ -98,7 +98,7 @@ $(document).ready(function(){
   <tr>
     <td>Operation Number</td>
     <td>Department</td>
-    <td>PPH</td>
+    <td>Spec PPH</td>
     <td>Completed</td>
     <td>Actual PPH</td>
     <td>Action</td>
