@@ -50,5 +50,9 @@ class WorkSession(
   var elapsed: Long = 0
   var count: Long = 0
   override def toString: String = s"WorkSession by $employee with $count clicks"
-  def actualPPH: Double = 0.0
+  def actualPPH: Double = {
+    val millisecondsPerHour = 60.0/*minutes*/ * 60.0/*seconds*/ * 1000.0/*ms*/;
+    val hours = elapsed / millisecondsPerHour
+    count.toDouble / hours
+  }
 }

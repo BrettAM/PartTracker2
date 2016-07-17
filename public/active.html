@@ -78,7 +78,8 @@ $(document).ready(function(){
       var elapsed = s.ElapsedTime;
       function hours(ms) {   return (((ms / 1000) / 60) / 60); };
       function minutes(ms) { return (( ms / 1000) / 60) % 60; };
-      var elapsedString = hours(elapsed).toFixed(0)+":"+minutes(elapsed).toFixed(0);
+      var elapsedString = hours(elapsed).toFixed(0)+" hrs, "+
+                          minutes(elapsed).toFixed(0)+" min";
 
       table.append($('<tr>')
         .append($('<td>').append(s.MO))
@@ -89,7 +90,7 @@ $(document).ready(function(){
         .append($('<td>').append(elapsedString))
         .append($('<td>').append(s.count))
         .append($('<td>').append(s.ExpectedPPH))
-        .append($('<td>').append(s.ActualPPH))
+        .append($('<td>').append(s.ActualPPH.toFixed(2)))
       );
     }
 
