@@ -84,6 +84,12 @@ $(document).ready(function(){
       populateMoTable(MO);
     });
   });
+
+  // If The input field is prepoulated (like after a user hits `back`),
+  // immediatly perform a search for what was put in the mo name field
+  if($(this).find("input[name='MOnumber']").val() != ""){
+    $("#MOsearch").submit();
+  }
 });
 </script>
 </head>
