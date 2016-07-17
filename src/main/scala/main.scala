@@ -141,7 +141,7 @@ object Main {
       val id = req.queryParams("MO")
       if(MOs.contains(id)){
         val mo = MOs(id)
-        val ops = mo.getOperations.map(_.summary)
+        val ops = mo.getOperations.toSeq.sortBy(_.number).map(_.summary)
         toJson(ops)
       } else {
         ""
