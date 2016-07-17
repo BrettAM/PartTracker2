@@ -19,18 +19,18 @@
 <script>
 
 function Timer(){
-  this.elapsedTime = 0;
-  this.triggerTime = 0;
-  this.start = function() { this.triggerTime = Date.now(); };
+  var elapsedTime = 0;
+  var triggerTime = 0;
+  this.start = function() { triggerTime = Date.now(); };
   this.stop = function() {
-    this.elapsedTime += this.getTime();
-    this.triggerTime = 0;
+    elapsedTime += this.getTime();
+    triggerTime = 0;
   };
   this.getTime = function() {
-    return (this.isOn())? (Date.now()-this.triggerTime) : 0;
+    return (this.isOn())? (Date.now()-triggerTime) : 0;
   };
-  this.getTotal = function() { return this.elapsedTime + this.getTime(); };
-  this.isOn = function() { return (this.triggerTime != 0); }
+  this.getTotal = function() { return elapsedTime + this.getTime(); };
+  this.isOn = function() { return (triggerTime != 0); }
 }
 
 function msToHours(ms){
@@ -39,38 +39,39 @@ function msToHours(ms){
 
 /** Responsible for local state in a job work session */
 function Session(expectedPPH, transmit){
-  this.partsLogged = 0;
-  this.expectedPPH = expectedPPH;
-  this.timeLastPart = 0;
-  this.timer = new Timer();
+  var partsLogged = 0;
+  var timeLastPart = 0;
+  var timer = new Timer();
   this.logPart = function () {
-    if(!this.timer.isOn()) return;
-    this.timeLastPart = Date.now();
-    this.partsLogged += 1;
+    if(!timer.isOn()) return;
+    timeLastPart = Date.now();
+    partsLogged += 1;
     this.sendUpdate();
   };
   this.sendUpdate = function () {
-    transmit({count: this.partsLogged, elapsed: this.timer.getTotal()});
+    transmit({count: partsLogged, elapsed: timer.getTotal()});
   };
   this.start = function () {
-    this.timer.start();
-    this.timeLastPart = Date.now();
+    timer.start();
+    timeLastPart = Date.now();
   };
   this.stop = function () {
-    this.timer.stop();
+    timer.stop();
   };
   this.actualPPH = function() {
-    var hours = msToHours(this.timer.getTotal());
-    return (hours==0) ? 0.0 : (this.partsLogged/hours);
-  }
+    var hours = msToHours(timer.getTotal());
+    return (hours==0) ? 0.0 : (partsLogged/hours);
+  };
   this.expectedPartCount = function () {
-    return this.expectedPPH * msToHours(this.timer.getTotal());
-  }
+    return expectedPPH * msToHours(timer.getTotal());
+  };
   this.percentageNext = function () {
-    var delta = msToHours(Date.now() - this.timeLastPart);
-    var nextPartPercentage = Math.min(this.expectedPPH*delta, 1.0) * 100;
-    return (this.timer.isOn()) ? nextPartPercentage : 0.0;
-  }
+    var delta = msToHours(Date.now() - timeLastPart);
+    var nextPartPercentage = Math.min(expectedPPH*delta, 1.0) * 100;
+    return (this.isOn()) ? nextPartPercentage : 0.0;
+  };
+  this.isOn = function () { return timer.isOn(); };
+  this.partsLogged = function () { return partsLogged; };
 }
 
 var uri = new URI(window.location);
@@ -98,7 +99,7 @@ function startWork(expectedPPH, socket){
   }
 
   function updateCompleted(){
-    $("#Completed").text(session.partsLogged);
+    $("#Completed").text(session.partsLogged());
     $("#ActualPPH").text(session.actualPPH().toFixed(2));
   }
 
@@ -117,7 +118,7 @@ function startWork(expectedPPH, socket){
   });
 
   $("#Toggle").click(function(){
-    if(session.timer.isOn()){
+    if(session.isOn()){
       session.stop();
       $(this).text("Start");
       $("#Part").prop("disabled",true);

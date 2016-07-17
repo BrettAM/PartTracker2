@@ -23,7 +23,6 @@ function createRedirectButton(Name, mo, opNum) {
 
 function populateMoTable(MOnumber) {
   $.get("mo", {MO: MOnumber}, function(data){
-    console.log(data);
     if(data == "") {
       alert("MO does not exist");
       return;
