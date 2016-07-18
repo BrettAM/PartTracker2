@@ -2,25 +2,33 @@
 <head>
 <script src="jquery.js"></script>
 <script>
-
+/**
+ * Transmit a request to register a new operation on the server
+ * Creates an alert if there is an error
+ */
 function registerNewOperation(MO, number, dept, pph){
   $.post("operation", {MO: MO, opnum: number, dept: dept, PPH: pph}, function(data){
+    // Response will be "" or an error message
     if(data != "") alert(data);
-    else populateMoTable(MO); //repopulate table after changes
   });
 }
 
-function workRedirect(MO, operation) {
-  window.location = "work.html?"+$.param({MO: MO, opnum: operation})
-}
-
-function createRedirectButton(Name, mo, opNum) {
+/**
+ * Create a button the redirects the the work page for the given MO/opnum pair
+ *     when clicked
+ */
+function createRedirectButton(Name, MO, opnum) {
   return $('<button/>', {
     text: Name,
-    click: function() { workRedirect(mo, opNum); }
+    click: function() {
+      window.location = "work.html?"+$.param({MO: MO, opnum: opnum})
+    }
   });
 }
 
+var inputRow = $("#InputRow");
+
+/** Populate the table with operation data from the server */
 function populateMoTable(MOnumber) {
   $.get("mo", {MO: MOnumber}, function(data){
     if(data == "") {
@@ -28,16 +36,15 @@ function populateMoTable(MOnumber) {
       return;
     }
 
-    // clear all but the first row of the table
-    $("#operations").find("tr:gt(0)").remove()
-
-    // Fill the table with this MO's data
-    var ops = JSON.parse(data);
+    // Get the table id and remove old data rows
     var table = $('#operations').find('tbody');
+    table.find(".transient").remove();
+
+    // Insert new rows for each operation received
+    var ops = JSON.parse(data);
     for(var i = 0; i < ops.length; i++){
       var op = ops[i]
-
-      table.append($('<tr>')
+      table.append($('<tr class="transient">')
         .append($('<td>').append(op.number))
         .append($('<td>').append(op.department))
         .append($('<td>').append(op.PPH))
@@ -63,14 +70,14 @@ function populateMoTable(MOnumber) {
           department.val(),
           partPerHour.val()
         );
+        populateMoTable(MOnumber);
       }
     });
-    table.append($('<tr>')
+    table.append($('<tr class="transient">')
       .append($('<td>').append(opNumber))
       .append($('<td>').append(department))
       .append($('<td>').append(partPerHour))
-      .append($('<td>'))
-      .append($('<td>'))
+      .append($('<td/><td/>')) // skip completed and actualPPH columns
       .append($('<td>').append(newOpButton))
     );
   });
@@ -106,14 +113,16 @@ $(document).ready(function(){
 </div>
 
 <table style="width:100%" id="operations">
-  <tr>
-    <td>Operation Number</td>
-    <td>Department</td>
-    <td>Spec PPH</td>
-    <td>Completed</td>
-    <td>Actual PPH</td>
-    <td>Action</td>
-  </tr>
+  <tbody>
+    <tr>
+      <td>Operation Number</td>
+      <td>Department</td>
+      <td>Spec PPH</td>
+      <td>Completed</td>
+      <td>Actual PPH</td>
+      <td>Action</td>
+    </tr>
+  </tbody>
 </table>
 
 </body>
