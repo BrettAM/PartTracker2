@@ -2,62 +2,6 @@
 <head>
 <script src="jquery.js"></script>
 <script>
-function populateMoTable(MOnumber) {
-  $.get("mo", {MO: MOnumber}, function(data){
-    console.log(data);
-    if(data == "") {
-      alert("MO does not exist");
-      return;
-    }
-
-    // clear all but the first row of the table
-    $("#operations").find("tr:gt(0)").remove()
-
-    // Fill the table with this MO's data
-    var ops = JSON.parse(data);
-    var table = $('#operations').find('tbody');
-    for(var i = 0; i < ops.length; i++){
-      var op = ops[i]
-      var workButton = $('<button/>',{
-        text: 'Work',
-        click: function () { workRedirect(MOnumber, op.number) }
-      });
-
-      table.append($('<tr>')
-        .append($('<td>').append(op.number))
-        .append($('<td>').append(op.department))
-        .append($('<td>').append(op.PPH))
-        .append($('<td>').append(op.partsCompleted))
-        .append($('<td>').append(op.truePPH))
-        .append($('<td>').append(workButton))
-      );
-    }
-
-    //Make a row at the bottom with fields for registering operations
-    var opNumber = $("<input type=\"text\"/>");
-    var department = $("<input type=\"text\"/>");
-    var partPerHour = $("<input type=\"text\"/>");
-    var newOpButton = $('<button/>',{
-      text: "Register",
-      click: function () {
-        registerNewOperation(
-          MOnumber,
-          opNumber.val(),
-          department.val(),
-          partPerHour.val()
-        );
-      }
-    });
-    table.append($('<tr>')
-      .append($('<td>').append(opNumber))
-      .append($('<td>').append(department))
-      .append($('<td>').append(partPerHour))
-      .append($('<td>'))
-      .append($('<td>'))
-      .append($('<td>').append(newOpButton))
-    );
-  });
-}
 $(document).ready(function(){
   $("#Sessions").hide();
 

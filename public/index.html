@@ -26,8 +26,6 @@ function createRedirectButton(Name, MO, opnum) {
   });
 }
 
-var inputRow = $("#InputRow");
-
 /** Populate the table with operation data from the server */
 function populateMoTable(MOnumber) {
   $.get("mo", {MO: MOnumber}, function(data){
