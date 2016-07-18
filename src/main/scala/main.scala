@@ -13,42 +13,31 @@ import org.eclipse.jetty.websocket.api.{Session => JettySession};
 import spark.Spark
 
 object Main {
+  /** Map containing the database of MOs by MO id string */
   val MOs = scala.collection.mutable.HashMap.empty[String,MO]
 
-  class WorkPageMessage(val count: Long, val elapsed: Long)
-
+  /**
+   * Class representing an active work socket connection
+   * @param mo  Mo being worked on
+   * @param op  Operation being worked on
+   * @param job WorkSession being worked on
+   * @param js  websocket data is moving through
+   */
   class JobSession(
     val mo: MO,
     val op: Operation,
     val job: WorkSession,
     val js: JettySession
   ) {
-    println("Session for "+job.employee+" accepted")
-
     val expectedPPH = (op.PPH * job.crewSize.toDouble)
+
     //First message should be the expected parts per hour
     sendMessage( expectedPPH.toString )
 
-    def onMessage(message: String): Unit = {
-      System.err.println("Received message "+message)
+    /** POD class for JSON translation for data updates from the work page */
+    class WorkPageMessage(val count: Long, val elapsed: Long)
 
-      val update: WorkPageMessage = fromJson[WorkPageMessage](message)
-      if(update == null) return
-
-      if(update.count < job.count || update.elapsed < job.elapsed){
-        System.err.println("Invalid update from job page")
-      } else {
-        job.count = update.count
-        job.elapsed = update.elapsed
-      }
-    }
-
-    def onClose(code: Int, reason: String): Unit = {
-      println("session for "+job.employee+" closed")
-    }
-
-    def sendMessage(message: String) = js.getRemote.sendStringByFuture(message);
-
+    /** POD class for JSON translation containing a summary of this session */
     class JobSessionSummary(){
       val MO: String = mo.id
       val opnum: Int = op.number
@@ -60,6 +49,30 @@ object Main {
       val ExpectedPPH: Double = expectedPPH
       val ActualPPH: Double = job.actualPPH
     }
+
+    /**
+     * Handler method called by ClickResponder when a message from the
+     * work page is received
+     */
+    def onMessage(message: String): Unit = {
+      val update: WorkPageMessage = fromJson[WorkPageMessage](message)
+      if(update == null) return
+
+      if(update.count < job.count || update.elapsed < job.elapsed){
+        System.err.println("Invalid update from job page")
+      } else {
+        job.count = update.count
+        job.elapsed = update.elapsed
+      }
+    }
+
+    /** Handler method called by ClickResponder when a session closes */
+    def onClose(code: Int, reason: String): Unit = {}
+
+    /** Transmit a message to the work page */
+    def sendMessage(message: String) = js.getRemote.sendStringByFuture(message);
+
+    /** Return a summary of this session */
     def summarize = new JobSessionSummary
   }
 
@@ -77,7 +90,7 @@ object Main {
       //try and construct a worksession
       val ws = for(m <- mo; o <- opnum; e <- employee; c <- crewSize) yield {
         m.getOperation(o) match {
-          case Some(x) => (m,x,x.newSession(e,c))
+          case Some(op) => (m,op,op.newSession(e,c))
           case _ => return;
         }
       }
@@ -90,6 +103,7 @@ object Main {
         connected +=( (remote, new JobSession(d._1, d._2, d._3, remote)) )
       }
     }
+
     @OnWebSocketClose
     def onClose(remote: JettySession, code: Int, reason:String): Unit = {
       if(connected.contains(remote)){
@@ -98,11 +112,13 @@ object Main {
         connected -= remote
       }
     }
+
     @OnWebSocketMessage
     def onMessage(remote: JettySession, message: String): Unit = {
       connected(remote).onMessage(message)
     }
 
+    /** Return a seq of currently running job sessions */
     def activeSessions: Seq[JobSession] = connected.values.toSeq
   }
 
@@ -120,14 +136,17 @@ object Main {
     Spark.staticFiles.externalLocation("./public")
     Spark.port(4567)
 
-    /* websocket job
+    /**
+     * create websocket for part counting
+     * Requests should include MO, opnum, empl (employeee id),
+     *   and crew (crew size) as parameters
+     * After connecting, the socket will transmit the expected PPH for the job
+     * From then on the page can transmit JSON objects with count and elapsed
+     *   field that can be used to update the server to work progress
      */
     Spark.webSocket("/job", ClickResponder.getClass);
 
-    /**
-     * Retrieve A list of all active jobs
-     *
-     */
+    /** Retrieve A list of all active jobs as summaries */
     get("/active") { (req, res) =>
       toJson(ClickResponder.activeSessions.map(_.summarize))
     }
@@ -164,6 +183,8 @@ object Main {
 
     /**
      * Register a new Operation
+     * Returns an empty string on success, or a string containing an error
+     *   message on failure
      * MO The MO to register the operation under
      * dept The department the Operation is associated with
      * opnum The operation's index (must be an integer)
