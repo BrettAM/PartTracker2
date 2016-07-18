@@ -3,6 +3,7 @@ package com
 import com.google.gson._
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
+import java.io.Reader
 import scala.collection.JavaConversions._
 import scala.collection.mutable.Buffer
 import scala.reflect.ClassTag
@@ -29,6 +30,8 @@ object Serialization{
 
   def toJson(input: Any): String = gson.toJson(input)
   def fromJson[T: ClassTag](input: String): T =
+    gson.fromJson(input, classTag[T].runtimeClass)
+  def fromJson[T: ClassTag](input: Reader): T =
     gson.fromJson(input, classTag[T].runtimeClass)
 
   /** Attempt extract a list of type parameters from a Type t */
@@ -83,7 +86,7 @@ object Serialization{
       val obj = if(e.isJsonObject) e.getAsJsonObject
                 else throw new JsonParseException("Can't deserialize map from nonobject")
 
-      val innertType = getTypeParameters(t) match {
+      val innerType = getTypeParameters(t) match {
         case Some(types) => types(1)
         case None => throw new Exception("Can't find map key type")
       }
@@ -91,7 +94,7 @@ object Serialization{
       val builder = scala.collection.mutable.Map.newBuilder[String,Any]
       obj.entrySet.foreach{ entry =>
         val k = entry.getKey
-        val v: Any = ctx.deserialize(entry.getValue,innertType)
+        val v: Any = ctx.deserialize(entry.getValue,innerType)
         builder +=( (k,v) )
       }
 

@@ -6,6 +6,10 @@ import scala.collection.JavaConversions._
 import scala.io.Source
 import scala.util.Try
 
+import java.io.FileReader
+import java.io.FileWriter
+import java.io.File
+
 import com.google.gson.Gson
 import com.SparkLib._
 import org.eclipse.jetty.websocket.api.annotations._;
@@ -13,8 +17,19 @@ import org.eclipse.jetty.websocket.api.{Session => JettySession};
 import spark.Spark
 
 object Main {
+  type MODB = scala.collection.mutable.Map[String,MO]
+  /**
+   * Since normal classOf[] objects don't carry enough information about
+   * parameterized subtypes to support recursive deserialization with json,
+   * This proxy object's class field listing will have to be used to
+   * get that data at runtime
+   *
+   * I'm not totally convinced this is the only way
+   */
+  case class SerializationProxy(val data: MODB)
+
   /** Map containing the database of MOs by MO id string */
-  val MOs = scala.collection.mutable.HashMap.empty[String,MO]
+  var MOs: MODB = scala.collection.mutable.HashMap.empty[String,MO]
 
   /**
    * Class representing an active work socket connection
@@ -123,15 +138,51 @@ object Main {
   }
 
   def main(args: Array[String]) = {
-    //debug database entries
-    MOs("A") = {
-      val m = new MO("A")
-      m.addOperation(new Operation(1,"Paint",10))
-      m.addOperation(new Operation(2,"Fab",20))
-      m.addOperation(new Operation(3,"Finish",5))
-      m
+    val dbFileName = if (args.length >= 1) args(0) else "MODB.json"
+    val dbFile = new File(dbFileName)
+    if(!dbFile.exists()) dbFile.createNewFile
+
+    if(!dbFile.canWrite()){
+      println("Error: Cannot write to database output file "+dbFileName)
+      exit
     }
 
+    val inputDB = {
+      val db = new FileReader(dbFile)
+      val result =
+          fromJson[SerializationProxy](db)
+      db.close()
+      result
+    }
+
+    MOs = if (inputDB!=null && inputDB.data!=null) inputDB.data
+          else scala.collection.mutable.HashMap.empty[String,MO]
+
+    def writeMoDb(): Unit = {
+      dbFile.synchronized {
+        val writer = new FileWriter(dbFile)
+        writer.write(toJson( SerializationProxy(MOs) ))
+        writer.close
+      }
+    }
+
+    // Register a shutdown hook to write the MO database
+    Runtime.getRuntime().addShutdownHook(new Thread{
+      override def run(): Unit = writeMoDb()
+    })
+
+    setupServer()
+
+    //write MO DB at regular interval, preferrably specified somewhere external
+
+
+    //shutdown after receiving any input just for debugging speed
+    System.console().readLine()
+    Spark.stop()
+    writeMoDb()
+  }
+
+  def setupServer() {
     //Initialize webserver
     Spark.staticFiles.externalLocation("./public")
     Spark.port(4567)
@@ -212,9 +263,5 @@ object Main {
       }
     }
 
-    //shutdown after receiving any input
-    System.console().readLine()
-    println(toJson(MOs))
-    Spark.stop()
   }
 }

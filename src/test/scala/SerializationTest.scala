@@ -19,6 +19,29 @@ class ExampleSpec extends FlatSpec with Matchers {
     m should be (Map(("A" -> true), ("B" -> false)))
   }
 
+  "A Deserialized String Map" should "Have the correct instance types" in {
+    val i = scala.collection.mutable.Map( ("A" -> "B"), ("B" -> "C") )
+    val j = toJson(i)
+    val r = fromJson[MMap[String,String]](j)
+    r.keys.foreach(  v => v.asInstanceOf[String] )
+    r.values.foreach(v => v.asInstanceOf[String] )
+  }
+
+  case class Tobj(val data: String, val tag: Int)
+  case class MapObj(val data: MMap[String,Tobj])
+  "A Deserialized object Map" should "Have the correct instance types" in {
+    val i: MapObj = MapObj(
+      scala.collection.mutable.Map(
+        ("B" -> Tobj("B",0)),
+        ("C" -> Tobj("C",1))
+      )
+    )
+    val j: String = toJson(i)
+    val r: MapObj = fromJson[MapObj](j)
+    r.data.keys.foreach(  v => v.asInstanceOf[String] )
+    r.data.values.foreach(v => v.asInstanceOf[Tobj] )
+  }
+
   "A Serialized Seq" should "Be a Json Array" in {
     val s = Seq(1,2,3,42)
     toJson(s) should be ("""[1,2,3,42]""")
@@ -87,7 +110,6 @@ class ExampleSpec extends FlatSpec with Matchers {
     mo.addOperation(op)
     val json = toJson(mo)
     val result = fromJson[MO](json)
-    result.getOperations.foreach(println)
     result.getOperation(1).get.completed should be (20)
   }
 }
