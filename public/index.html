@@ -10,6 +10,7 @@ function registerNewOperation(MO, number, dept, pph){
   $.post("operation", {MO: MO, opnum: number, dept: dept, PPH: pph}, function(data){
     // Response will be "" or an error message
     if(data != "") alert(data);
+    else populateMoTable(MO);
   });
 }
 
@@ -68,7 +69,6 @@ function populateMoTable(MOnumber) {
           department.val(),
           partPerHour.val()
         );
-        populateMoTable(MOnumber);
       }
     });
     table.append($('<tr class="transient">')
