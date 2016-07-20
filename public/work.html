@@ -154,8 +154,10 @@ $(document).ready(function(){
     $("#Employee").text(emp)
 
     // Construct websocket request address
-    var socketAddress = "ws://"+location.hostname+":"+location.port+"/job?"
-                        +$.param({MO: MO, opnum: op, empl: emp, crew: crw});
+    var socketAddress = "ws://"+location.hostname +
+                        ((location.port=="")? "" : ":"+location.port) +
+                        "/job?" +
+                        $.param({MO: MO, opnum: op, empl: emp, crew: crw});
 
     //Startup the websocket. The first message will be the expected session PPH
     var webSocket = new WebSocket(socketAddress);
