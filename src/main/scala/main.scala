@@ -16,6 +16,12 @@ import org.eclipse.jetty.websocket.api.annotations._;
 import org.eclipse.jetty.websocket.api.{Session => JettySession};
 import spark.Spark
 
+//TODO
+//periodic backup at user specified interval
+//test backup system
+//web page themeing
+//phat jar packed configuration for static files
+
 object Main {
   type MODB = scala.collection.mutable.Map[String,MO]
   /**

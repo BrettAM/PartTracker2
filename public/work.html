@@ -16,6 +16,7 @@
 </style>
 <script src="jquery.js"></script>
 <script src="URI.js"></script>
+<script src="Chart.js"></script>
 <script>
 
 function Timer(){
@@ -44,6 +45,12 @@ function Session(expectedPPH, transmit){
   var timer = new Timer();
   this.logPart = function () {
     if(!timer.isOn()) return;
+
+    //Only here for testing
+    chart.data.labels.push("Part Time");
+    chart.data.datasets[0].data.push((Date.now() - timeLastPart) / 1000.0);
+    chart.update();
+
     timeLastPart = Date.now();
     partsLogged += 1;
     this.sendUpdate();
@@ -141,6 +148,8 @@ function startWork(expectedPPH, socket){
   };
 }
 
+var chart;
+
 $(document).ready(function(){
   showStartup();
   $( "#loginForm" ).submit(function(event) {
@@ -174,6 +183,23 @@ $(document).ready(function(){
       alert("Connection Failure");
     }
   });
+
+  var canvas = $("#progressChart");
+  var startingData = {
+      labels: [],
+      datasets: [{
+        fillColor: "rgba(220,220,220,0.2)",
+        strokeColor: "rgba(220,220,220,1)",
+        pointColor: "rgba(220,220,220,1)",
+        pointStrokeColor: "#fff",
+        data: []
+      }]
+    };
+
+  chart = new Chart(canvas, {
+    data: startingData,
+    type: "line"
+  });
 });
 </script>
 </head>
@@ -193,6 +219,8 @@ $(document).ready(function(){
   Expected: <span id="Expected">0</span> <br>
   Actual PPH: <span id="ActualPPH">0</span> <br>
   Expected PPH: <span id="ExpectedPPH">0</span> <br>
+
+  <canvas id="progressChart" width="500" height="300"></canvas>
 
   <div id="progressBar">
     <div id="progressFill">
