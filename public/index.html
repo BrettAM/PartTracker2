@@ -1,5 +1,6 @@
 <html>
 <head>
+<link rel="stylesheet" type="text/css" href="style.css">
 <script src="jquery.js"></script>
 <script>
 /**
@@ -57,9 +58,9 @@ function populateMoTable(MOnumber) {
     }
 
     //Make a row at the bottom with fields for registering operations
-    var opNumber = $("<input type=\"text\"/>");
-    var department = $("<input type=\"text\"/>");
-    var partPerHour = $("<input type=\"text\"/>");
+    var opNumber = $("<input type=\"text\" class=\"tableInput\"/>");
+    var department = $("<input type=\"text\" class=\"tableInput\"/>");
+    var partPerHour = $("<input type=\"text\" class=\"tableInput\"/>");
     var newOpButton = $('<button/>',{
       text: "Register",
       click: function () {
@@ -100,7 +101,11 @@ $(document).ready(function(){
 </head>
 <body>
 
-<a href="active.html">Active sessions</a>
+<div id="rightLink">
+  <form action="active.html">
+    <input type="submit" value="Active Sessions"/>
+  </form>
+</div>
 
 <div>
   <form action="/" id="MOsearch">
@@ -113,15 +118,17 @@ $(document).ready(function(){
 <table style="width:100%" id="operations">
   <tbody>
     <tr>
-      <td>Operation Number</td>
-      <td>Department</td>
-      <td>Spec PPH</td>
-      <td>Completed</td>
-      <td>Actual PPH</td>
-      <td>Action</td>
+      <th>Operation #</th>
+      <th>Department</th>
+      <th>Spec PPH</th>
+      <th>Completed</th>
+      <th>True PPH</th>
+      <th>Action</th>
     </tr>
   </tbody>
 </table>
+
+<img id="bottomlogo" src="altek.png"">
 
 </body>
 </html>

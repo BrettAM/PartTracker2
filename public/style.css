@@ -1,0 +1,41 @@
+#rightLink {
+    float: right;
+}
+#bottomlogo {
+    display: block;
+    margin: auto;
+    width: 50%;
+    padding: 40px;
+}
+body {
+    font-family: "Helvetica", "Arial", sans-serif;
+    font-size: 12pt;
+    color: #555;
+    background-color: #eee;
+}
+input {
+    font-size:12pt;
+    color: #555;
+}
+button {
+    width:100%;
+    font-size:12pt;
+    color: #555;
+}
+table {
+    border-collapse: collapse;
+    table-layout: fixed;
+    border: 3px solid #00406d;
+}
+th, td {
+    text-align: left;
+    padding: 8px;
+}
+tr:nth-child(even){ background-color: #ddd }
+th {
+    background-color: #006BB7;
+    color: #eee;
+}
+.tableInput {
+    width:100%
+}
