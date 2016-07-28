@@ -79,11 +79,13 @@ var MO = uri.search(true)["MO"];
 var op = uri.search(true)["opnum"];
 
 function showStartup(){
+  console.log("showing startup");
   $("#login").show();
   $("#working").hide();
 }
 
 function hideStartup(){
+  console.log("hiding startup");
   $("#login").hide();
   $("#working").show();
 }
@@ -154,19 +156,29 @@ $(document).ready(function(){
     $("#Employee").text(emp)
 
     // Construct websocket request address
-    var socketAddress = "ws://"+location.hostname+":"+location.port+"/job?"
-                        +$.param({MO: MO, opnum: op, empl: emp, crew: crw});
+    var socketAddress = "ws://"+location.hostname +
+                        ((location.port=="")? "" : location.port) +
+                        "/job?" +
+                        $.param({MO: MO, opnum: op, empl: emp, crew: crw});
 
     //Startup the websocket. The first message will be the expected session PPH
+    console.log("sending connect request to "+socketAddress);
     var webSocket = new WebSocket(socketAddress);
     var workSession;
+    console.log("Request sent");
+    webSocket.onerror = function (data) {
+      console.log("Websocket error");
+      console.log(data);
+    };
     webSocket.onmessage = function (event) {
+      console.log("Connection start message received");
       var expectedPPH = Number(event.data);
       $("#ExpectedPPH").text(expectedPPH.toFixed(2));
       workSession = startWork(expectedPPH, webSocket);
       webSocket.onmessage = function (event) { console.log("Received "+data); }
     };
     webSocket.onclose = function(event) {
+      console.log("Connection closed");
       showStartup();
       if(workSession != null) workSession.shutdown();
       alert("Connection Failure");

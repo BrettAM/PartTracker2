@@ -7,6 +7,7 @@
  * Creates an alert if there is an error
  */
 function registerNewOperation(MO, number, dept, pph){
+  console.log("Registering a new operation");
   $.post("operation", {MO: MO, opnum: number, dept: dept, PPH: pph}, function(data){
     // Response will be "" or an error message
     if(data != "") alert(data);
@@ -28,12 +29,15 @@ function createRedirectButton(Name, MO, opnum) {
 
 /** Populate the table with operation data from the server */
 function populateMoTable(MOnumber) {
+  console.log("Building table");
+
   $.get("mo", {MO: MOnumber}, function(data){
     if(data == "") {
       alert("MO does not exist");
       return;
     }
 
+    console.log("Table data received");
     // Get the table id and remove old data rows
     var table = $('#operations').find('tbody');
     table.find(".transient").remove();

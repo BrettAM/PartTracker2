@@ -16,6 +16,12 @@ import org.eclipse.jetty.websocket.api.annotations._;
 import org.eclipse.jetty.websocket.api.{Session => JettySession};
 import spark.Spark
 
+//TODO
+//periodic backup at user specified interval
+//test backup system
+//web page themeing
+//phat jar packed configuration for static files
+
 object Main {
   type MODB = scala.collection.mutable.Map[String,MO]
   /**
@@ -44,6 +50,8 @@ object Main {
     val job: WorkSession,
     val js: JettySession
   ) {
+    println(s"New work session for ${mo.id}, ${op.number}, ${job.employee}")
+
     val expectedPPH = (op.PPH * job.crewSize.toDouble)
 
     //First message should be the expected parts per hour
@@ -70,6 +78,7 @@ object Main {
      * work page is received
      */
     def onMessage(message: String): Unit = {
+      println(s"New Message from ${job.employee} ${message}")
       val update: WorkPageMessage = fromJson[WorkPageMessage](message)
       if(update == null) return
 
@@ -82,7 +91,9 @@ object Main {
     }
 
     /** Handler method called by ClickResponder when a session closes */
-    def onClose(code: Int, reason: String): Unit = {}
+    def onClose(code: Int, reason: String): Unit = {
+      println(s"Session closed for ${mo.id}, ${op.number}, ${job.employee}")
+    }
 
     /** Transmit a message to the work page */
     def sendMessage(message: String) = js.getRemote.sendStringByFuture(message);
@@ -95,6 +106,7 @@ object Main {
     val connected = scala.collection.mutable.HashMap.empty[JettySession,JobSession]
     @OnWebSocketConnect
     def onConnect(remote: JettySession): Unit = {
+      println("Connect request")
       //Get the socket data
       val parameters = remote.getUpgradeRequest.getParameterMap
       val mo: Try[MO] = Try( MOs( parameters.get("MO").get(0) ) )
@@ -185,7 +197,7 @@ object Main {
   def setupServer() {
     //Initialize webserver
     Spark.staticFiles.externalLocation("./public")
-    Spark.port(4567)
+    Spark.port(80)
 
     /**
      * create websocket for part counting
@@ -199,6 +211,7 @@ object Main {
 
     /** Retrieve A list of all active jobs as summaries */
     get("/active") { (req, res) =>
+      println("active list query")
       toJson(ClickResponder.activeSessions.map(_.summarize))
     }
 
@@ -208,6 +221,7 @@ object Main {
      * Returns an empty string if the MO does not exist
      */
     get("/mo"){ (req, res) =>
+      println("mo get request")
       val id = req.queryParams("MO")
       if(MOs.contains(id)){
         val mo = MOs(id)
@@ -224,6 +238,7 @@ object Main {
      * If the specified MO already exists, no action is taken
      */
     post("/mo"){ (req, res) =>
+      println("mo post request")
       val id = req.queryParams("MO")
       if(!MOs.contains(id)) {
         val mo = new MO(id)
@@ -242,6 +257,7 @@ object Main {
      * pph The operations parts per hour (must be a real number)
      */
     post("/operation"){ (req, res) =>
+      println("operation post request")
       val moid = req.queryParams("MO")
       val department = req.queryParams("dept")
       val opNum = Try(req.queryParams("opnum").toInt)
