@@ -147,39 +147,48 @@ object Main {
       exit
     }
 
-    val inputDB = {
-      val db = new FileReader(dbFile)
-      val result =
-          fromJson[SerializationProxy](db)
-      db.close()
-      result
-    }
+    loadDatabase(dbFile)
 
-    MOs = if (inputDB!=null && inputDB.data!=null) inputDB.data
-          else scala.collection.mutable.HashMap.empty[String,MO]
-
-    def writeMoDb(): Unit = {
-      dbFile.synchronized {
-        val writer = new FileWriter(dbFile)
-        writer.write(toJson( SerializationProxy(MOs) ))
-        writer.close
-      }
-    }
+    // Startup the webserver
+    setupServer()
 
     // Register a shutdown hook to write the MO database
     Runtime.getRuntime().addShutdownHook(new Thread{
-      override def run(): Unit = writeMoDb()
+      override def run(): Unit = writeDatabase(dbFile)
     })
 
-    setupServer()
-
-    //write MO DB at regular interval, preferrably specified somewhere external
-
+    // write MO DB at regular interval, preferrably specified somewhere external
+    import java.util.concurrent._
+    val executor = new ScheduledThreadPoolExecutor(1)
+    executor.scheduleAtFixedRate(
+      new Runnable { def run() = writeDatabase(dbFile) },
+      0 /*initialDelay*/,
+      30 /*Period*/,
+      TimeUnit.MINUTES)
 
     //shutdown after receiving any input just for debugging speed
     System.console().readLine()
+    executor.shutdownNow()
     Spark.stop()
-    writeMoDb()
+    writeDatabase(dbFile)
+  }
+
+  def writeDatabase(file: File): Unit = {
+    println("Writing to database")
+    file.synchronized {
+      val writer = new FileWriter(file)
+      writer.write(toJson( SerializationProxy(MOs) ))
+      writer.close
+    }
+  }
+
+  def loadDatabase(file: File): Unit = {
+    val fr = new FileReader(file)
+    val inputDB = fromJson[SerializationProxy](fr)
+    fr.close()
+
+    MOs = if (inputDB!=null && inputDB.data!=null) inputDB.data
+          else scala.collection.mutable.HashMap.empty[String,MO]
   }
 
   def setupServer() {
