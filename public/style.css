@@ -64,6 +64,8 @@ th {
     display: inline-block;
     text-align: center;
 }
+#canvas {
+}
 .flex-container{
     width: 100%;
     display: flex;

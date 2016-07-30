@@ -33,15 +33,11 @@ function Session(expectedPPH, transmit){
   var timer = new Timer();
   this.logPart = function () {
     if(!timer.isOn()) return;
-
-    //Only here for testing
-    chart.data.labels.push("Part Time");
-    chart.data.datasets[0].data.push((Date.now() - timeLastPart) / 1000.0);
-    chart.update();
-
+    var deltaTime = (Date.now()-timeLastPart)/1000.0;
     timeLastPart = Date.now();
     partsLogged += 1;
     this.sendUpdate();
+    return deltaTime;
   };
   this.sendUpdate = function () {
     transmit({count: partsLogged, elapsed: timer.getTotal()});
@@ -88,7 +84,7 @@ function hideStartup(){
  * @return A work session object supporting a "shutdown" command that stops
  *             internal timers
  */
-function startWork(expectedPPH, socket){
+function startWork(expectedPPH, socket, updateChart){
   function sendToSocket(data){
     socket.send(JSON.stringify(data));
   }
@@ -108,7 +104,8 @@ function startWork(expectedPPH, socket){
   var heartbeat = window.setInterval(function(){session.sendUpdate()},30000);
 
   $("#Part").click(function(){
-    session.logPart();
+    var dt = session.logPart();
+    updateChart(dt, expectedPPH);
     updateCompleted();
   });
 
@@ -136,10 +133,47 @@ function startWork(expectedPPH, socket){
   };
 }
 
-var chart;
+
+function initChart() {
+  Chart.defaults.global.animation.duration = 300;
+  var canvas = $("#canvas");
+  var startingData = {
+      labels: [],
+      datasets: [{
+        label: "Time Per Part",
+        borderColor: "rgba(0,65,109,0.2)",
+        backgroundColor: "rgba(0,65,109,0.1)",
+        data: []
+      },
+      {
+        label: "Expected",
+        data: []
+      }]
+    };
+  chart = new Chart(canvas, {
+    data: startingData,
+    type: "line"
+  });
+  function cycle(array, newdata, length) {
+    while(array.length >= length){
+      array.shift();
+    }
+    array.push(newdata);
+  }
+  return function(dt, expectedPPH){
+    var secondsPerPart = 60*60 / expectedPPH;
+    cycle(chart.data.labels, "", 20);
+    cycle(chart.data.datasets[0].data, dt, 20);
+    cycle(chart.data.datasets[1].data, secondsPerPart, 20);
+    chart.update();
+  };
+}
 
 $(document).ready(function(){
   showStartup();
+
+  var updateChart = initChart();
+
   $( "#loginForm" ).submit(function(event) {
     event.preventDefault();
 
@@ -164,7 +198,7 @@ $(document).ready(function(){
     webSocket.onmessage = function (event) {
       var expectedPPH = Number(event.data);
       $("#ExpectedPPH").text(expectedPPH.toFixed(2));
-      workSession = startWork(expectedPPH, webSocket);
+      workSession = startWork(expectedPPH, webSocket, updateChart);
       webSocket.onmessage = function (event) { console.log("Received "+data); }
     };
     webSocket.onclose = function(event) {
@@ -172,23 +206,6 @@ $(document).ready(function(){
       if(workSession != null) workSession.shutdown();
       alert("Connection Failure");
     }
-  });
-
-  var canvas = $("#progressChart");
-  var startingData = {
-      labels: [],
-      datasets: [{
-        fillColor: "rgba(220,220,220,0.2)",
-        strokeColor: "rgba(220,220,220,1)",
-        pointColor: "rgba(220,220,220,1)",
-        pointStrokeColor: "#fff",
-        data: []
-      }]
-    };
-
-  chart = new Chart(canvas, {
-    data: startingData,
-    type: "line"
   });
 });
 </script>
@@ -216,7 +233,7 @@ $(document).ready(function(){
     </div>
   </div>
 
-  <canvas id="progressChart" width="500" height="300"></canvas>
+  <canvas id="canvas" width="300" height="100"></canvas>
 
   <div id="progressBar">
     <div id="progressFill">
