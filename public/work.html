@@ -1,20 +1,7 @@
 <html>
 <head>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" type="text/css" href="style.css">
-<style>
-#progressBar {
-  position: relative;
-  width: 100%;
-  height: 10px;
-  background-color: #555;
-}
-#progressFill {
-  position: absolute;
-  width: 10%;
-  height: 100%;
-  background-color: #4c97cc;
-}
-</style>
 <script src="jquery.js"></script>
 <script src="URI.js"></script>
 <script>
@@ -151,8 +138,10 @@ $(document).ready(function(){
     var emp = $(this).find("input[name='Employee']").val();
     var crw = $(this).find("input[name='CrewSize']").val();
 
-    // Update Employee field on the page
-    $("#Employee").text(emp)
+    // Update displays on the page
+    $("#Employee").text(emp);
+    $("#MO").text(MO);
+    $("#Operation").text(op);
 
     // Construct websocket request address
     var socketAddress = "ws://"+location.hostname +
@@ -189,19 +178,55 @@ $(document).ready(function(){
 </div>
 
 <div id="working">
-  Employee: <span id="Employee">0</span> <br>
-  Completed: <span id="Completed">0</span> <br>
-  Expected: <span id="Expected">0</span> <br>
-  Actual PPH: <span id="ActualPPH">0</span> <br>
-  Expected PPH: <span id="ExpectedPPH">0</span> <br>
+  <div class="flex-container">
+    <div>
+      Employee: <b><span id="Employee">0</span></b>
+    </div>
+    <div>
+      MO: <b><span id="MO">0</span></b>
+    </div>
+    <div>
+      Operation: <b><span id="Operation">0</span></b>
+    </div>
+  </div>
 
   <div id="progressBar">
     <div id="progressFill">
     </div>
   </div>
 
-  <button id="Part" disabled>Count Up</button><br>
-  <button id="Toggle">Start</button><br>
+  <div class="flex-container">
+    <div class="flex-block">
+      <div class="disp-blk-header">
+        Parts <br>
+      </div>
+      <div class="disp-blk-row">
+        <span class="leftalign">Expected</span>
+        <span class="rightalign" id="Expected">0</span>
+      </div>
+      <div class="disp-blk-row">
+        <span class="leftalign">Actual</span>
+        <span class="rightalign" id="Completed">0</span>
+      </div>
+    </div>
+    <div class="flex-block">
+      <div class="disp-blk-header">
+        Parts Per Hour<br>
+      </div>
+      <div class="disp-blk-row">
+        <span class="leftalign">Expected</span>
+        <span class="rightalign" id="ExpectedPPH">0</span>
+      </div>
+      <div class="disp-blk-row">
+        <span class="leftalign">Actual</span>
+        <span class="rightalign" id="ActualPPH">0</span>
+      </div>
+    </div>
+  </div>
+  <div class="flex-container">
+    <button class="flex-block" id="Part" disabled>Count Up</button>
+    <button class="flex-block" id="Toggle">Start</button>
+  </div>
 </div>
 
 </body>

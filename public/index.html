@@ -20,12 +20,14 @@ function registerNewOperation(MO, number, dept, pph){
  *     when clicked
  */
 function createRedirectButton(Name, MO, opnum) {
-  return $('<button/>', {
+  var button = $('<button/>', {
     text: Name,
     click: function() {
       window.location = "work.html?"+$.param({MO: MO, opnum: opnum})
     }
   });
+  button.addClass("tableInput");
+  return button;
 }
 
 /** Populate the table with operation data from the server */
@@ -72,6 +74,7 @@ function populateMoTable(MOnumber) {
         );
       }
     });
+    newOpButton.addClass("tableInput")
     table.append($('<tr class="transient">')
       .append($('<td>').append(opNumber))
       .append($('<td>').append(department))
@@ -115,7 +118,7 @@ $(document).ready(function(){
   </form>
 </div>
 
-<table style="width:100%" id="operations">
+<table id="operations">
   <tbody>
     <tr>
       <th>Operation #</th>
