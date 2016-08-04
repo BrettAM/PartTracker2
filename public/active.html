@@ -27,15 +27,15 @@ $(document).ready(function(){
                           minutes(elapsed).toFixed(0)+" min";
 
       table.append($('<tr>')
-        .append($('<td>').append(s.MO))
-        .append($('<td>').append(s.opnum))
-        .append($('<td>').append(s.Employee))
-        .append($('<td>').append(s.crewSize))
-        .append($('<td>').append(dateString))
-        .append($('<td>').append(elapsedString))
-        .append($('<td>').append(s.count))
-        .append($('<td>').append(s.ExpectedPPH.toFixed(2)))
-        .append($('<td>').append(s.ActualPPH.toFixed(2)))
+        .append($('<td>').append( $('<span>').text(s.MO) ))
+        .append($('<td>').append( $('<span>').text(s.opnum) ))
+        .append($('<td>').append( $('<span>').text(s.Employee) ))
+        .append($('<td>').append( $('<span>').text(s.crewSize) ))
+        .append($('<td>').append( $('<span>').text(dateString) ))
+        .append($('<td>').append( $('<span>').text(elapsedString) ))
+        .append($('<td>').append( $('<span>').text(s.count) ))
+        .append($('<td>').append( $('<span>').text(s.ExpectedPPH.toFixed(2)) ))
+        .append($('<td>').append( $('<span>').text(s.ActualPPH.toFixed(2)) ))
       );
     }
 

@@ -47,11 +47,11 @@ function populateMoTable(MOnumber) {
     for(var i = 0; i < ops.length; i++){
       var op = ops[i]
       table.append($('<tr class="transient">')
-        .append($('<td>').append(op.number))
-        .append($('<td>').append(op.department))
-        .append($('<td>').append(op.PPH))
-        .append($('<td>').append(op.partsCompleted))
-        .append($('<td>').append(op.truePPH.toFixed(2)))
+        .append($('<td>').append( $('<span>').text(op.number) ))
+        .append($('<td>').append( $('<span>').text(op.department) ))
+        .append($('<td>').append( $('<span>').text(op.PPH) ))
+        .append($('<td>').append( $('<span>').text(op.partsCompleted) ))
+        .append($('<td>').append( $('<span>').text(op.truePPH.toFixed(2)) ))
         .append($('<td>').append(
             createRedirectButton('Work', MOnumber, op.number)
           )
