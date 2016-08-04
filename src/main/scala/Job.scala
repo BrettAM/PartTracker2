@@ -13,6 +13,10 @@ class MO(val id: String){
     }
   }
 
+  def removeOperation(number: Int): Unit = {
+    operations -= number.toString
+  }
+
   def getOperation(number: Int): Option[Operation] =
     if(operations.contains(number.toString)) Some(operations(number.toString))
     else None
