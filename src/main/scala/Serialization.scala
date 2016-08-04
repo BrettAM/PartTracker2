@@ -4,6 +4,7 @@ import com.google.gson._
 import java.lang.reflect.ParameterizedType
 import java.lang.reflect.Type
 import java.io.Reader
+import java.io.Writer
 import scala.collection.JavaConversions._
 import scala.collection.mutable.Buffer
 import scala.reflect.ClassTag
@@ -29,6 +30,7 @@ object Serialization{
     .create
 
   def toJson(input: Any): String = gson.toJson(input)
+  def toJson(input: Any, file: Writer): Unit = gson.toJson(input, file)
   def fromJson[T: ClassTag](input: String): T =
     gson.fromJson(input, classTag[T].runtimeClass)
   def fromJson[T: ClassTag](input: Reader): T =
