@@ -204,7 +204,7 @@ $(document).ready(function(){
     webSocket.onclose = function(event) {
       showStartup();
       if(workSession != null) workSession.shutdown();
-      alert("Connection Failure");
+      alert("Connection Failure ("+event.code+")\n"+event.reason);
     }
   });
 });
