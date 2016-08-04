@@ -12,7 +12,6 @@ input {
     color: #555;
 }
 
-
 #rightLink {
     float: right;
 }
@@ -32,6 +31,7 @@ table {
     border-collapse: collapse;
     table-layout: fixed;
     border: 3px solid #00406d;
+    word-break: break-all;
 }
 th, td {
     text-align: left;
@@ -41,8 +41,8 @@ tr:nth-child(even){ background-color: #ddd }
 th {
     background-color: #006BB7;
     color: #eee;
+    word-break: normal;
 }
-
 
 #progressBar {
     position: relative;
