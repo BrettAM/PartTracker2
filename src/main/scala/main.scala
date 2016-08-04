@@ -38,6 +38,18 @@ object Main {
   var MOs: MODB = scala.collection.mutable.HashMap.empty[String,MO]
 
   /**
+   * Parse a double but disallow NaN and Infinity like values
+   * @type {Object}
+   */
+  def safeParseDouble(s: String): Double = {
+    val d = s.toDouble
+    if(d.isInfinite || d.isNaN){
+      throw new RuntimeException("Illegal (nan) double value as input")
+    }
+    d
+  }
+
+  /**
    * Class representing an active work socket connection
    * @param mo  Mo being worked on
    * @param op  Operation being worked on
@@ -104,9 +116,13 @@ object Main {
       //Get the socket data
       val parameters = remote.getUpgradeRequest.getParameterMap
       val mo: Try[MO] = Try( MOs( parameters.get("MO").get(0) ) )
-      val opnum: Try[Int] = Try( parameters.get("opnum").get(0).toInt )
+      val opnum: Try[Int] = Try( parameters.get("opnum").get(0).trim.toInt )
       val employee: Try[String] = Try( parameters.get("empl").get(0) )
-      val crewSize: Try[Int] = Try( parameters.get("crew").get(0).toInt )
+      val crewSize: Try[Int] = Try{
+        val e = parameters.get("crew").get(0).trim.toInt
+        if(e <= 0) throw new RuntimeException("No negative crew sizes")
+        e
+      }
 
       //try and construct a worksession
       val ws = for(m <- mo; o <- opnum; e <- employee; c <- crewSize) yield {
@@ -182,8 +198,8 @@ object Main {
   def writeDatabase(file: File): Unit = {
     println("Writing to database")
     file.synchronized {
-      val writer = new FileWriter(file)
-      writer.write(toJson( SerializationProxy(MOs) ))
+      val writer = new FileWriter(file, false /*overwrite*/)
+      toJson(SerializationProxy(MOs), writer)
       writer.close
     }
   }
@@ -240,7 +256,7 @@ object Main {
      */
     post("/mo"){ (req, res) =>
       val id = req.queryParams("MO")
-      if(!MOs.contains(id)) {
+      if(!MOs.contains(id) && id != "") {
         val mo = new MO(id)
         MOs(id) = mo
       }
@@ -260,17 +276,25 @@ object Main {
       val moid = req.queryParams("MO")
       val department = req.queryParams("dept")
       val opNum = Try(req.queryParams("opnum").toInt)
-      val pph = Try(req.queryParams("PPH").toDouble)
+      val pph = Try(safeParseDouble(req.queryParams("PPH")))
       val MO = Try(MOs(moid))
 
       if (opNum.isFailure) "Invalid Operation Number"
       else if (department.isEmpty) "Department required"
-      else if (pph.isFailure) "Invalid PPH"
+      else if (pph.isFailure || pph.get <= 0.0) "Invalid PPH"
       else if (MO.isFailure) "Invalid MO number"
       else {
         val mo = MO.get
-        if(mo.getOperation(opNum.get) != None) "Operation Number Already Exists"
-        else {
+        if(mo.getOperation(opNum.get) != None) {
+          if(department == "delete"){
+            mo.removeOperation(opNum.get)
+            ""
+          } else {
+            "Operation Number Already Exists;" +
+            " To remove an existing operation, enter \"delete\""+
+            " as the department name"
+          }
+        } else {
           val op = new Operation(opNum.get, department, pph.get)
           mo.addOperation(op)
           ""
