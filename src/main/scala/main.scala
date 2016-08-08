@@ -23,6 +23,17 @@ import spark.Spark
 //phat jar packed configuration for static files
 
 object Main {
+  val usageMessage: String =
+    """Altek Part Tracker Webserver
+      |Usage: PartTrackerServer FILE [PORT] [BACKUP_MINUTES]
+      |FILE = the file to read and write the log of the MO database
+      |PORT = the TCP port to serve app pages on, default 80
+      |BACKUP_MINUTES = the number of minutes in between automatic backups
+      |        of the MO database, default 30
+      |The MO database is saved on shutdown automatically
+      |Author: Brett Menzies (scimor5@gmail.com)
+    """.stripMargin
+
   type MODB = scala.collection.mutable.Map[String,MO]
   /**
    * Since normal classOf[] objects don't carry enough information about
@@ -159,8 +170,18 @@ object Main {
     def activeSessions: Seq[JobSession] = connected.values.toSeq
   }
 
-  def main(args: Array[String]) = {
-    val dbFileName = if (args.length >= 1) args(0) else "MODB.json"
+  def main(args: Array[String]): Unit = {
+    if(args.length < 1){
+      println(usageMessage)
+      return
+    }
+
+    val dbFileName = args(0)
+    val port = if(args.length >= 2) args(1).toInt else 80
+    val updateInterval = if(args.length >= 3) args(2).toInt else 30
+
+    println(s"Saving to $dbFileName every $updateInterval minutes")
+
     val dbFile = new File(dbFileName)
     if(!dbFile.exists()) dbFile.createNewFile
 
@@ -172,7 +193,7 @@ object Main {
     loadDatabase(dbFile)
 
     // Startup the webserver
-    setupServer()
+    setupServer(port)
 
     // Register a shutdown hook to write the MO database
     Runtime.getRuntime().addShutdownHook(new Thread{
@@ -185,7 +206,7 @@ object Main {
     executor.scheduleAtFixedRate(
       new Runnable { def run() = writeDatabase(dbFile) },
       0 /*initialDelay*/,
-      30 /*Period*/,
+      updateInterval /*Period*/,
       TimeUnit.MINUTES)
 
     //shutdown after receiving any input just for debugging speed
@@ -196,7 +217,6 @@ object Main {
   }
 
   def writeDatabase(file: File): Unit = {
-    println("Writing to database")
     file.synchronized {
       val writer = new FileWriter(file, false /*overwrite*/)
       toJson(SerializationProxy(MOs), writer)
@@ -213,10 +233,11 @@ object Main {
           else scala.collection.mutable.HashMap.empty[String,MO]
   }
 
-  def setupServer() {
+  def setupServer(port: Int) {
+    println(s"Starting webserver on port $port")
     //Initialize webserver
     Spark.staticFiles.externalLocation("./public")
-    Spark.port(4567)
+    Spark.port(port)
 
     /**
      * create websocket for part counting
