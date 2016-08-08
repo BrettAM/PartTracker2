@@ -16,12 +16,6 @@ import org.eclipse.jetty.websocket.api.annotations._;
 import org.eclipse.jetty.websocket.api.{Session => JettySession};
 import spark.Spark
 
-//TODO
-//periodic backup at user specified interval
-//test backup system
-//web page themeing
-//phat jar packed configuration for static files
-
 object Main {
   val usageMessage: String =
     """Altek Part Tracker Webserver
@@ -236,7 +230,7 @@ object Main {
   def setupServer(port: Int) {
     println(s"Starting webserver on port $port")
     //Initialize webserver
-    Spark.staticFiles.externalLocation("./public")
+    Spark.staticFiles.externalLocation("./resources")
     Spark.port(port)
 
     /**
