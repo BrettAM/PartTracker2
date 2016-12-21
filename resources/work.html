@@ -29,39 +29,40 @@ function msToHours(ms){
 /** Responsible for local state in a job work session */
 function Session(expectedPPH, transmit){
   var partsLogged = 0;
-  var timeLastPart = 0;
-  var timer = new Timer();
+  var timeThisPart = new Timer();
+  var runtime = new Timer();
   this.logPart = function () {
-    if(!timer.isOn()) return;
-    var deltaTime = (Date.now()-timeLastPart)/1000.0;
-    timeLastPart = Date.now();
+    if(!runtime.isOn()) return;
+    var deltaTime = timeThisPart.getTotal()/1000.0;
+    timeThisPart = new Timer();
+    timeThisPart.start();
     partsLogged += 1;
     this.sendUpdate();
     return deltaTime;
   };
   this.sendUpdate = function () {
-    transmit({count: partsLogged, elapsed: timer.getTotal()});
+    transmit({count: partsLogged, elapsed: runtime.getTotal()});
   };
   this.start = function () {
-    timer.start();
-    timeLastPart = Date.now();
+    runtime.start();
+    timeThisPart.start();
   };
   this.stop = function () {
-    timer.stop();
+    runtime.stop();
+    timeThisPart.stop();
   };
   this.actualPPH = function() {
-    var hours = msToHours(timer.getTotal());
+    var hours = msToHours(runtime.getTotal());
     return (hours==0) ? 0.0 : (partsLogged/hours);
   };
   this.expectedPartCount = function () {
-    return expectedPPH * msToHours(timer.getTotal());
+    return expectedPPH * msToHours(runtime.getTotal());
   };
   this.percentageNext = function () {
-    var delta = msToHours(Date.now() - timeLastPart);
-    var nextPartPercentage = Math.min(expectedPPH*delta, 1.0) * 100;
-    return (this.isOn()) ? nextPartPercentage : 0.0;
+    var delta = msToHours(timeThisPart.getTotal());
+    return Math.min(expectedPPH*delta, 1.0) * 100;
   };
-  this.isOn = function () { return timer.isOn(); };
+  this.isOn = function () { return runtime.isOn(); };
   this.partsLogged = function () { return partsLogged; };
 }
 
