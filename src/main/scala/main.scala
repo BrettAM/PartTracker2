@@ -142,6 +142,7 @@ object Main {
         remote.close(1008, "Invalid Parameters")
       } else {
         val d = ws.get
+        remote.setIdleTimeout(java.lang.Long.MAX_VALUE)
         connected +=( (remote, new JobSession(d._1, d._2, d._3, remote)) )
       }
     }
